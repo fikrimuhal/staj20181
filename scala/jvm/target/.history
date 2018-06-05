@@ -1,0 +1,27 @@
+~run
+clean
+compile
+run
+~run
+reload
+scalafmt
+build
+dist
+publishLocal
+reload
+run
+dist
+publishLocal
+build
+~compile
+clean
+reload
+compile
+clean
+run
+publishLocal
+make clean
+lean
+clean
+run
+exit
