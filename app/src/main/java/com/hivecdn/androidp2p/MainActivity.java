@@ -7,12 +7,17 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+
+import org.foo.protocol1;
 import org.webrtc.Logging;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
+
+import static org.foo.protocol1.toBinary;
+import java.nio.ByteBuffer;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, ChatClient.MyInterface{
 
@@ -22,6 +27,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     EditText messageEdit;
     TextView messageBox;
     ChatClient client;
+
+    void fooTest() {
+        protocol1.Message1 msg1 = new protocol1.Message1(5);
+        ByteBuffer msg11 = toBinary(msg1);
+        protocol1.MyProtocol msg12 = protocol1.fromBinary(msg11);
+        Log.v(TAG, "Ahey" + String.valueOf(((protocol1.Message1)msg12).x()));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +68,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         catch (SocketException e) {
             e.printStackTrace();
         }
+
+        fooTest();
+
     }
 
     void sendButtonClick()
