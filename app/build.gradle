@@ -28,7 +28,21 @@ dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'com.android.support:appcompat-v7:27.1.1'
     implementation 'com.android.support.constraint:constraint-layout:1.1.0'
+    //implementation 'com.google.android.exoplayer:exoplayer:r1.4.1'
+    implementation 'com.google.android.exoplayer:exoplayer:2.8.1'
+    //implementation 'org.scala-lang:scala-library:2.12.4'
+    //implementation 'org.scala-lang:scala-library:2.11.12'
+    //implementation 'io.circe:circe-core_2.11:0.10.0-M1' // circe: desugar fails
+    //implementation 'io.circe:circe-generic_2.11:0.10.0-M1'
+    //implementation 'io.circe:circe-parser_2.11:0.10.0-M1'
+    //implementation 'io.argonaut:argonaut_2.11:6.2.2' // argonaut: desugar fails
+    //play-json: desugar fails
+    //implementation 'com.github.plokhotnyuk.jsoniter-scala:core_2.11:0.2' // poor documentation, example doesn't even work
+    //sonofjson: Doesn't exist in maven, the source depends on a library called 'scala-reflect', which, even though it exists on maven, can't be resolved by sbt.
+
+    implementation 'me.chrons:boopickle_2.11:1.2.5'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    //implementation files('libs/bpfoo_2.11.jar')
 }
