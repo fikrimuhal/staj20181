@@ -39,6 +39,8 @@ dependencies {
     //play-json: desugar fails
     //implementation 'com.github.plokhotnyuk.jsoniter-scala:core_2.11:0.2' // poor documentation, example doesn't even work
     //sonofjson: Doesn't exist in maven, the source depends on a library called 'scala-reflect', which, even though it exists on maven, can't be resolved by sbt.
+    //implementation 'io.monix:monix_2.11:2.3.3'
+    //implementation 'org.wvlet:airframe-log_2.11:0.21'
 
     implementation 'me.chrons:boopickle_2.11:1.2.5'
     testImplementation 'junit:junit:4.12'
