@@ -14,14 +14,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
-/**
- * Main Activity for the IMA plugin demo. {@link ExoPlayer} objects are created by
- * {@link PlayerManager}, which this class instantiates.
- */
 public final class ReceiverActivity extends AppCompatActivity {
 
-  static public AssetManager mngr;
-  static public Context context;
   private PlayerView playerView;
   private PlayerManager player;
 
@@ -29,10 +23,8 @@ public final class ReceiverActivity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_receiver);
-    context = this;
     playerView = findViewById(R.id.player_view);
     player = new PlayerManager(this);
-    mngr = getAssets();
   }
 
   @Override

@@ -504,8 +504,9 @@ public class ChatClient implements  MyWebSocketListener, PeerConnection.Observer
     @Override
     public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
         Log.v(TAG, "onIceConnectionChange: " + iceConnectionState.name());
-        if (iceConnectionState == PeerConnection.IceConnectionState.CONNECTED)
-            iface.onConnected();
+        if (iceConnectionState == PeerConnection.IceConnectionState.CONNECTED) {
+            //iface.onConnected();
+        }
         else if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
             iface.onVerbose("Disconnected");
             otherPeerId = null;
@@ -605,6 +606,8 @@ public class ChatClient implements  MyWebSocketListener, PeerConnection.Observer
     @Override
     public void onStateChange() {
         Log.v(TAG, "onStateChange");
+        if (dChannel.state() == DataChannel.State.OPEN)
+            iface.onConnected();
     }
 
     @Override

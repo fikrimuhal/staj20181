@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">AndroidP2P</string>
+    <string name="content_url">https://www.hivecdn.com/androiddeneme/demo.mp4</string>
 </resources>

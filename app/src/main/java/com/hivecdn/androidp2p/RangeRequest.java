@@ -8,9 +8,10 @@ public class RangeRequest implements P2PProtocolMessage {
     @Override
     public ByteBuffer toBinary() {
         ByteBuffer buf = ByteBuffer.allocate(9);
-        buf.put((byte)10);
-        buf.putInt(start);
-        buf.putInt(len);
+        buf.put(0, (byte)10);
+        buf.putInt(1, start);
+        buf.putInt(5, len);
+        buf.position(0);
         return buf;
     }
 

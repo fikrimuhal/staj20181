@@ -121,6 +121,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         runOnUiThread (new Thread(new Runnable() {
             public void run() {
                 messageBox.append("<Connected>");
+                client.sendMessage("First message!");
                 sendButton.setEnabled(true);
             }
         }));

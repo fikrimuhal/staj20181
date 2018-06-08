@@ -22,10 +22,10 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
 
     private final String TAG = P2PDataSource.class.getName();
 
-    private class Triad implements Comparator<Triad>{
+    private class Triad implements Comparable<Triad>{
         @Override
-        public int compare(Triad x, Triad y) {
-            return y.start-x.start;
+        public int compareTo(Triad other) {
+            return other.start-start;
         }
 
         public ByteBuffer buf;
@@ -61,8 +61,10 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
 
     @Override
     public void onResponse(ByteBuffer buf, int start, int len) {
+        Log.v(TAG, "Received range [" + start + "," + (start+len) + ")");
         synchronized (triads) {
             triads.add(new Triad(buf.slice(), start, len));
+            Log.v(TAG, "Size of the set after the addition: " + triads.size());
             triads.notifyAll();
         }
     }
@@ -74,6 +76,7 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
 
     @Override
     public void onConnected(String otherId) {
+        Log.v(TAG, "Requesting range [" + dataSpec.position + "," + (dataSpec.position+dataSpec.length) + ")");
         vpc.requestRange((int)dataSpec.position, (int)dataSpec.length);
     }
 
@@ -81,6 +84,7 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
     public long open(DataSpec _dataSpec) throws IOException {
         dataSpec = _dataSpec;
         pos = (int)dataSpec.position;
+        Log.v(TAG, "open called. Clearing triads... (pos: " + pos + ")");
         synchronized (triads) {
             triads.clear();
         }
@@ -90,29 +94,35 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
 
     @Override
     public int read(byte[] buffer, int offset, int readLength) throws IOException {
+        Log.v(TAG, "read: pos: " + pos + "readLength: " + readLength);
         Triad bestMatch;
         synchronized (triads) {
             while (true) {
-                bestMatch = triads.floor(new Triad(null, pos, 0));
-                if (bestMatch != null && bestMatch.start+bestMatch.len > pos)
+                bestMatch = triads.ceiling(new Triad(null, pos, 0)); // Java documentation seems to be off here. Floor find the lower bound, ceiling finds the upper bound, but this doesn't make sense, nor is this how TreeSet is documented.
+                if (bestMatch != null && bestMatch.start+bestMatch.len > pos) {
+                    Log.v(TAG, "Suitable triad found.");
                     break;
+                }
                 try {
-                    Log.v(TAG, "read found no suitable triads. Waiting...");
+                    Log.v(TAG, "read found no suitable triads. Waiting... (pos: " + pos + ") bestMatch = " + (bestMatch==null?"null":"sth") + ", set size: " + triads.size());
                     triads.wait();
                 }
                 catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
         }
         final int readLength2 = Math.min(bestMatch.start + bestMatch.len, pos+readLength) - pos;
         for (int i=0;i<readLength2;i++)
             buffer[i+offset] = bestMatch.buf.get(pos-bestMatch.start);
-        if (readLength >= readLength2) {// If all of the current triad has been read, we can delete it from memory.
+        if (readLength > readLength2) {// If all of the current triad has been read, we can delete it from memory.
             synchronized (triads) {
+                Log.v(TAG, "Removing the current triad, as it has been exhausted. (readLength: " + readLength + ", readLength2: " + readLength2 + ")");
                 triads.remove(bestMatch);
             }
         }
         pos += readLength2;
+        Log.v(TAG, "read() returns");
         return readLength2;
     }
 

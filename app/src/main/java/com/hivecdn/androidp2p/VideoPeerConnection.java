@@ -244,20 +244,32 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
             Log.v(TAG, "JSONException");
         }
     }
-    public void sendRange(ByteBuffer bytes, int start) {
+    public void sendRange(byte[] bytes, int start, int len) {
         if (dChannel == null)
             return ;
         // TODO: For too large ranges, we need to split into smaller packages.
-        ByteBuffer header = new RangeResponse(start, bytes.remaining()).toBinary();
-        ByteBuffer all = ByteBuffer.allocate(header.limit() + bytes.remaining());
+        if (len > 2*1024) {
+            iface.onVerbose("The message that is to be sent is too long. It'll be made smaller.");
+            len = 2*1024;
+        }
+        ByteBuffer header = new RangeResponse(start, len).toBinary();
+        ByteBuffer all = ByteBuffer.allocate(header.limit() + len);
         all.put(header);
-        all.put(bytes);
+        all.put(bytes, 0, len);
+        all.position(0); // Without this line, Webrtc library only sends the last 9 bytes.
+        iface.onVerbose("sendRange: Message to be sent: position: " + all.position() + ", limit: " + all.limit() + ", capacity: " + all.capacity());
+        StringBuilder sb = new StringBuilder();
+        for (int i=0;i<15;i++)
+            sb.append(all.get(i));
+        iface.onVerbose("sendRange: Message to be sent: " + sb.toString());
         dChannel.send(new DataChannel.Buffer(all, true));
     }
 
     public void requestRange(int start, int len) {
-        if (dChannel == null)
-            return ;
+        if (dChannel == null) {
+            iface.onVerbose("Can't send message, dChannel == null");
+            return;
+        }
         ByteBuffer header = new RangeRequest(start, len).toBinary();
         dChannel.send(new DataChannel.Buffer(header, true));
     }
@@ -491,8 +503,9 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
     @Override
     public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
         Log.v(TAG, "onIceConnectionChange: " + iceConnectionState.name());
-        if (iceConnectionState == PeerConnection.IceConnectionState.CONNECTED)
-            iface.onConnected(otherPeerId);
+        if (iceConnectionState == PeerConnection.IceConnectionState.CONNECTED) {
+            //  iface.onConnected(otherPeerId);
+        }
         else if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
             iface.onVerbose("Disconnected");
             otherPeerId = null;
@@ -569,7 +582,7 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
         Log.v(TAG, "onDataChannel: " + dataChannel.hashCode());
         dataChannel.registerObserver(this);
         dChannel = dataChannel;
-        //iface.onConnected();
+        //iface.onConnected(otherPeerId);
     }
 
     @Override
@@ -589,7 +602,9 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
 
     @Override
     public void onStateChange() {
-        Log.v(TAG, "onStateChange");
+        Log.v(TAG, "onStateChange: " + dChannel.state().name());
+        if (dChannel.state() == DataChannel.State.OPEN)
+            iface.onConnected(otherPeerId);
     }
 
     @Override
@@ -607,9 +622,11 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
             return ;
         }
         if (msg instanceof RangeRequest) {
+            iface.onVerbose("Got new request");
             iface.onRequest(((RangeRequest) msg).start, ((RangeRequest) msg).len);
         }
         else if (msg instanceof RangeResponse) {
+            iface.onVerbose("Got new response");
             iface.onResponse(buffer.data, ((RangeResponse) msg).start, ((RangeResponse) msg).len); // We pass buffer.data intact because the header part is already read by the binary parser, and its position has been set accordingly.
         }
     }
