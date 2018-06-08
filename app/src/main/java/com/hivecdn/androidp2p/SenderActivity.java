@@ -35,8 +35,8 @@ public class SenderActivity extends AppCompatActivity implements VideoPeerConnec
             /*int debugRangeStart = Math.max(4080, start);
             int debugRangeEnd = Math.min(4100, start+len);
             for (int i=debugRangeStart; i<debugRangeEnd; i++)*/
-            for (int i=start; i<2048; i++)
-                Log.d(TAG, "Byte " + i + " is: " + buf[i-start]);
+            //for (int i=start; i<2048; i++)
+              //  Log.d(TAG, "Byte " + i + " is: " + buf[i-start]);
             Log.v(TAG, "Sending response [" + start + "," + (start+res) + ")");
             vpc.sendRange(buf, start, res);
         }

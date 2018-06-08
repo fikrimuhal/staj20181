@@ -602,8 +602,8 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
 
     @Override
     public void onStateChange() {
-        Log.v(TAG, "onStateChange: " + dChannel.state().name());
-        if (dChannel.state() == DataChannel.State.OPEN)
+        Log.v(TAG, "onStateChange: " + dChannel == null ? "null" : dChannel.state().name());
+        if (dChannel != null && dChannel.state() == DataChannel.State.OPEN)
             iface.onConnected(otherPeerId);
     }
 
