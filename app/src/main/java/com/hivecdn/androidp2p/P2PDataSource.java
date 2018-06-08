@@ -104,11 +104,16 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
                 }
             }
         }
-        readLength = Math.min(bestMatch.start + bestMatch.len, pos+readLength) - pos;
-        for (int i=0;i<readLength;i++)
+        final int readLength2 = Math.min(bestMatch.start + bestMatch.len, pos+readLength) - pos;
+        for (int i=0;i<readLength2;i++)
             buffer[i+offset] = bestMatch.buf.get(pos-bestMatch.start);
-        pos += readLength;
-        return readLength;
+        if (readLength >= readLength2) {// If all of the current triad has been read, we can delete it from memory.
+            synchronized (triads) {
+                triads.remove(bestMatch);
+            }
+        }
+        pos += readLength2;
+        return readLength2;
     }
 
     @Nullable
