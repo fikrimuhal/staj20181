@@ -614,4 +614,11 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
         }
     }
 
+    public void close() {
+        if (socket != null)
+            socket.close(1000, null);
+        if (peerConnection != null)
+            peerConnection.close();
+    }
+
 }

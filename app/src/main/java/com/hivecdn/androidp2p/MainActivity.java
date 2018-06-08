@@ -1,5 +1,6 @@
 package com.hivecdn.androidp2p;
 
+import android.content.Context;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -8,6 +9,7 @@ import android.widget.Button;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
+    static Context context;
     Button senderButton, receiverButton, chatButton;
 
     @Override
@@ -20,6 +22,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         senderButton.setOnClickListener(this);
         receiverButton.setOnClickListener(this);
         chatButton.setOnClickListener(this);
+        context = this;
     }
 
     @Override
