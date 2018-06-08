@@ -18,6 +18,8 @@ import java.util.TreeSet;
 
 import scala.NotImplementedError;
 
+import static com.google.android.exoplayer2.C.LENGTH_UNSET;
+
 public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterface {
 
     private final String TAG = P2PDataSource.class.getName();
@@ -89,18 +91,18 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
             triads.clear();
         }
         vpc = new VideoPeerConnection(MainActivity.context, dataSpec.uri.toString(), this);
-        return 0;
+        return LENGTH_UNSET;
     }
 
     @Override
     public int read(byte[] buffer, int offset, int readLength) throws IOException {
-        Log.v(TAG, "read: pos: " + pos + "readLength: " + readLength);
+        //Log.v(TAG, "read: pos: " + pos + "readLength: " + readLength);
         Triad bestMatch;
         synchronized (triads) {
             while (true) {
                 bestMatch = triads.ceiling(new Triad(null, pos, 0)); // Java documentation seems to be off here. Floor find the lower bound, ceiling finds the upper bound, but this doesn't make sense, nor is this how TreeSet is documented.
                 if (bestMatch != null && bestMatch.start+bestMatch.len > pos) {
-                    Log.v(TAG, "Suitable triad found.");
+                    //Log.v(TAG, "Suitable triad found.");
                     break;
                 }
                 try {
@@ -113,8 +115,14 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
             }
         }
         final int readLength2 = Math.min(bestMatch.start + bestMatch.len, pos+readLength) - pos;
-        for (int i=0;i<readLength2;i++)
-            buffer[i+offset] = bestMatch.buf.get(pos-bestMatch.start);
+        for (int i=0;i<readLength2;i++) {
+            buffer[i + offset] = bestMatch.buf.get(pos+i - bestMatch.start);
+            //if (pos+i > 4080 && pos+i < 4100) {
+            //if ((pos+i) < 2048)
+            if (pos+i == 3)
+                Log.d(TAG, "Byte " + (pos + i) + " is: " + buffer[i + offset]);
+            //}
+        }
         if (readLength > readLength2) {// If all of the current triad has been read, we can delete it from memory.
             synchronized (triads) {
                 Log.v(TAG, "Removing the current triad, as it has been exhausted. (readLength: " + readLength + ", readLength2: " + readLength2 + ")");
@@ -122,7 +130,7 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
             }
         }
         pos += readLength2;
-        Log.v(TAG, "read() returns");
+        //Log.v(TAG, "read() returns");
         return readLength2;
     }
 

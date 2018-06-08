@@ -42,6 +42,7 @@ import okio.ByteString;
 public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection.Observer, SdpObserver, DataChannel.Observer{
 
     final String TAG = VideoPeerConnection.class.getName();
+    final int MaxNumBytesInSinglePacket = 2048;
 
     public interface MyInterface {
         void onVerbose(String msg);
@@ -247,22 +248,21 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
     public void sendRange(byte[] bytes, int start, int len) {
         if (dChannel == null)
             return ;
-        // TODO: For too large ranges, we need to split into smaller packages.
-        if (len > 2*1024) {
-            iface.onVerbose("The message that is to be sent is too long. It'll be made smaller.");
-            len = 2*1024;
+        int numBytesSent = 0;
+        while (numBytesSent < len) {
+            int thisTimeNumBytesSent = Math.min(MaxNumBytesInSinglePacket, len-numBytesSent);
+            ByteBuffer header = new RangeResponse(start+numBytesSent, thisTimeNumBytesSent).toBinary();
+            ByteBuffer all = ByteBuffer.allocate(header.limit() + thisTimeNumBytesSent);
+            all.put(header);
+            all.put(bytes, numBytesSent, thisTimeNumBytesSent);
+            all.position(0); // Without this line, Webrtc library only sends the last 9 bytes.
+            /*StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 15; i++)
+                sb.append(all.get(i));
+            iface.onVerbose("sendRange: Message to be sent: " + sb.toString());*/
+            dChannel.send(new DataChannel.Buffer(all, true));
+            numBytesSent += thisTimeNumBytesSent;
         }
-        ByteBuffer header = new RangeResponse(start, len).toBinary();
-        ByteBuffer all = ByteBuffer.allocate(header.limit() + len);
-        all.put(header);
-        all.put(bytes, 0, len);
-        all.position(0); // Without this line, Webrtc library only sends the last 9 bytes.
-        iface.onVerbose("sendRange: Message to be sent: position: " + all.position() + ", limit: " + all.limit() + ", capacity: " + all.capacity());
-        StringBuilder sb = new StringBuilder();
-        for (int i=0;i<15;i++)
-            sb.append(all.get(i));
-        iface.onVerbose("sendRange: Message to be sent: " + sb.toString());
-        dChannel.send(new DataChannel.Buffer(all, true));
     }
 
     public void requestRange(int start, int len) {
@@ -626,8 +626,16 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
             iface.onRequest(((RangeRequest) msg).start, ((RangeRequest) msg).len);
         }
         else if (msg instanceof RangeResponse) {
-            iface.onVerbose("Got new response");
-            iface.onResponse(buffer.data, ((RangeResponse) msg).start, ((RangeResponse) msg).len); // We pass buffer.data intact because the header part is already read by the binary parser, and its position has been set accordingly.
+            //iface.onVerbose("Got new response (capacity,limit,position): " + buffer.data.capacity() + ", " + buffer.data.limit() + ", " + buffer.data.position());
+            ByteBuffer data = ByteBuffer.allocate(buffer.data.remaining());
+            if (((RangeResponse) msg).start == 0)
+                iface.onVerbose("Byte 3 is: " + buffer.data.get(3+9));
+            data.put(buffer.data);
+            data.position(0);
+            if (((RangeResponse) msg).start == 0)
+                iface.onVerbose("Again, byte 3 is: " + data.get(3));
+            //iface.onVerbose("Data's (capacity,limit,position): " + data.capacity() + ", " + data.limit() + ", " + data.position());
+            iface.onResponse(data, ((RangeResponse) msg).start, ((RangeResponse) msg).len);
         }
     }
 
