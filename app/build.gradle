@@ -41,10 +41,11 @@ dependencies {
     //sonofjson: Doesn't exist in maven, the source depends on a library called 'scala-reflect', which, even though it exists on maven, can't be resolved by sbt.
     //implementation 'io.monix:monix_2.11:2.3.3'
     //implementation 'org.wvlet:airframe-log_2.11:0.21'
-
     implementation 'me.chrons:boopickle_2.11:1.2.5'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     //implementation files('libs/bpfoo_2.11.jar')
+    implementation files('libs/nanohttpd-2.3.2-SNAPSHOT.jar')
+    implementation files('libs/nanohttpd-webserver-2.3.2-SNAPSHOT.jar')
 }

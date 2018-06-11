@@ -597,7 +597,7 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
 
     @Override
     public void onBufferedAmountChange(long l) {
-        Log.v(TAG, "onBufferedAmountChange");
+        Log.v(TAG, "onBufferedAmountChange: " + l);
     }
 
     @Override

@@ -7,16 +7,25 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 
+import java.io.IOException;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     static Context context;
     Button senderButton, receiverButton, chatButton;
     Button bsenderButton, breceiverButton;
+    SimpleWebServer sws;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        try {
+            sws = new SimpleWebServer();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
         senderButton = findViewById(R.id.senderButton);
         receiverButton = findViewById(R.id.receiverButton);
         chatButton = findViewById(R.id.chatButton);

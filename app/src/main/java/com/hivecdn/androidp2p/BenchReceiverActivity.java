@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import java.nio.ByteBuffer;
 import java.util.Calendar;
@@ -19,6 +20,7 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
 
     VideoPeerConnection vpc;
     EditText editText;
+    TextView logView;
     Button goButton;
     int numBytesLeft;
     long startTime;
@@ -29,6 +31,7 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bench_receiver);
         editText = findViewById(R.id.editText);
+        logView = findViewById(R.id.logView);
         goButton = findViewById(R.id.goButton);
         goButton.setOnClickListener(this);
         goButton.setEnabled(false);
@@ -61,9 +64,10 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
             @Override
             public void run() {
                 if (numBytesLeft == 0) {
-                    editText.setEnabled(true);
-                    goButton.setEnabled(true);
-                    editText.setText("Took " + (curTime-startTime) + " ms.");
+                    //editText.setEnabled(true);
+                    //goButton.setEnabled(true);
+                    logView.append("Took " + (curTime-startTime) + " ms.\n");
+                    startRound();
                 }
                 else {
                     if (curTime - lastDisplayUpdateTime > MinDisplayUpdateInterval) {
@@ -80,20 +84,29 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
         Log.v(TAG, "Our id is: " + ourId);
     }
 
+    void startRound() {
+        numBytesLeft = 10000000; // 10 mb
+        editText.setText(String.valueOf(numBytesLeft));
+        startTime = Calendar.getInstance().getTimeInMillis();
+        lastDisplayUpdateTime = startTime;
+        vpc.requestRange(0, numBytesLeft);
+    }
+
     @Override
     public void onConnected(String otherId) {
         Log.v(TAG, "Connected to peer id: " + otherId);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                goButton.setEnabled(true);
+                startRound();
+                //goButton.setEnabled(true);
             }
         });
     }
 
     @Override
     public void onClick(View v) {
-        if (v == goButton) {
+        /*if (v == goButton) {
             numBytesLeft = Integer.valueOf(editText.getText().toString());
             if (numBytesLeft > 0) {
                 goButton.setEnabled(false);
@@ -103,6 +116,6 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
                 vpc.requestRange(0, numBytesLeft);
                 Log.v(TAG, "Benchmark started");
             }
-        }
+        }*/
     }
 }
