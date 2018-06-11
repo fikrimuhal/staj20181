@@ -11,17 +11,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     static Context context;
     Button senderButton, receiverButton, chatButton;
+    Button bsenderButton, breceiverButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main2);
+        setContentView(R.layout.activity_main);
         senderButton = findViewById(R.id.senderButton);
         receiverButton = findViewById(R.id.receiverButton);
         chatButton = findViewById(R.id.chatButton);
+        bsenderButton = findViewById(R.id.benchSender);
+        breceiverButton = findViewById(R.id.benchReceiver);
         senderButton.setOnClickListener(this);
         receiverButton.setOnClickListener(this);
         chatButton.setOnClickListener(this);
+        bsenderButton.setOnClickListener(this);
+        breceiverButton.setOnClickListener(this);
         context = this;
     }
 
@@ -35,6 +40,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         else if (v == chatButton) {
             startActivity(new Intent(this, ChatActivity.class));
+        }
+        else if (v == bsenderButton) {
+            startActivity(new Intent(this, BenchSenderActivity.class));
+        }
+        else if (v == breceiverButton) {
+            startActivity(new Intent(this, BenchReceiverActivity.class));
         }
     }
 }

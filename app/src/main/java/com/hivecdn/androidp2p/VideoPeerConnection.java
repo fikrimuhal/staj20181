@@ -626,15 +626,13 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
             iface.onRequest(((RangeRequest) msg).start, ((RangeRequest) msg).len);
         }
         else if (msg instanceof RangeResponse) {
-            //iface.onVerbose("Got new response (capacity,limit,position): " + buffer.data.capacity() + ", " + buffer.data.limit() + ", " + buffer.data.position());
+            if (((RangeResponse) msg).len != buffer.data.remaining()) {
+                Log.w(TAG, "Message's claimed length doesn't match its actual length. Ignoring.");
+                return ;
+            }
             ByteBuffer data = ByteBuffer.allocate(buffer.data.remaining());
-            if (((RangeResponse) msg).start == 0)
-                iface.onVerbose("Byte 3 is: " + buffer.data.get(3+9));
             data.put(buffer.data);
             data.position(0);
-            if (((RangeResponse) msg).start == 0)
-                iface.onVerbose("Again, byte 3 is: " + data.get(3));
-            //iface.onVerbose("Data's (capacity,limit,position): " + data.capacity() + ", " + data.limit() + ", " + data.position());
             iface.onResponse(data, ((RangeResponse) msg).start, ((RangeResponse) msg).len);
         }
     }

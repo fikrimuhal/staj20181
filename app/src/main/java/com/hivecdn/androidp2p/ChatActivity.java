@@ -25,7 +25,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_chat);
         sendButton = findViewById(R.id.sendButton);
         acceptButton = findViewById(R.id.acceptButton);
         denyButton = findViewById(R.id.denyButton);

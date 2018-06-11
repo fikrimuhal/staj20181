@@ -4,71 +4,65 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.hivecdn.androidp2p.ChatActivity">
+    tools:context=".MainActivity">
 
     <Button
-        android:id="@+id/sendButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:text="Send"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toEndOf="@+id/messageEdit" />
-
-    <EditText
-        android:id="@+id/messageEdit"
+        android:id="@+id/senderButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
-        android:ems="10"
-        android:inputType="textPersonName"
-        android:text="Message"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:text="SENDER"
+        app:layout_constraintBottom_toTopOf="@+id/chatButton"
+        app:layout_constraintEnd_toStartOf="@+id/receiverButton"
+        app:layout_constraintHorizontal_bias="0.393"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
-        android:id="@+id/acceptButton"
+        android:id="@+id/receiverButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:text="Accept"
-        app:layout_constraintBottom_toTopOf="@+id/sendButton"
+        android:layout_marginEnd="60dp"
+        android:text="RECEIVER"
+        app:layout_constraintBottom_toTopOf="@+id/chatButton"
         app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
-        android:id="@+id/denyButton"
+        android:id="@+id/chatButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
-        android:text="DENY"
-        app:layout_constraintBottom_toTopOf="@+id/acceptButton"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <Button
-        android:id="@+id/connectButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
-        android:text="CONNECT"
-        app:layout_constraintBottom_toTopOf="@+id/denyButton"
+        android:text="CHAT"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0" />
+        app:layout_constraintVertical_bias="0.498" />
 
-    <TextView
-        android:id="@+id/messageBox"
+    <Button
+        android:id="@+id/benchSender"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        tools:layout_editor_absoluteX="16dp"
-        tools:layout_editor_absoluteY="16dp" />
+        android:layout_marginStart="64dp"
+        android:layout_marginTop="8dp"
+        android:text="BSENDER"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/chatButton" />
 
+    <Button
+        android:id="@+id/benchReceiver"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:text="BRECEIVER"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/benchSender"
+        app:layout_constraintTop_toBottomOf="@+id/chatButton" />
 </android.support.constraint.ConstraintLayout>
