@@ -35,7 +35,7 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
         goButton = findViewById(R.id.goButton);
         goButton.setOnClickListener(this);
         goButton.setEnabled(false);
-        vpc = new VideoPeerConnection(MainActivity.context, "http://www.hivecdn.com/benchmark/video.mp4", this);
+        vpc = new VideoPeerConnection(MainActivity.context, "http://www.hivecdn.com/benchmark/video2.mp4", this);
     }
 
     @Override

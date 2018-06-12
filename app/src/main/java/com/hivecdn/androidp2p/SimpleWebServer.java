@@ -36,6 +36,7 @@ package com.hivecdn.androidp2p;
 import android.util.Log;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
@@ -85,13 +86,20 @@ public class SimpleWebServer extends NanoHTTPD {
 
     @Override
     public Response serve(IHTTPSession session) {
-        String msg = "<html><body><h1>Hello server</h1>\n";
+        /*String msg = "<html><body><h1>Hello server</h1>\n";
         Map<String, String> parms = session.getParms();
         if (parms.get("username") == null) {
             msg += "<form action='?' method='get'>\n  <p>Your name: <input type='text' name='username'></p>\n" + "</form>\n";
         } else {
             msg += "<p>Hello, " + parms.get("username") + "!</p>";
         }
-        return Response.newFixedLengthResponse(msg + "</body></html>\n");
+        return Response.newFixedLengthResponse(msg + "</body></html>\n");*/
+        return Response.newChunkedResponse(Status.OK, "text/plain", new InputStream() {
+            int i=0;
+            @Override
+            public int read() throws IOException {
+                return i++;
+            }
+        });
     }
 }

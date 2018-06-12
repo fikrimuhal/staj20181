@@ -42,7 +42,7 @@ import okio.ByteString;
 public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection.Observer, SdpObserver, DataChannel.Observer{
 
     final String TAG = VideoPeerConnection.class.getName();
-    final int MaxNumBytesInSinglePacket = 2048;
+    final int MaxNumBytesInSinglePacket = 1024*16; // 16 kbyte
 
     public interface MyInterface {
         void onVerbose(String msg);

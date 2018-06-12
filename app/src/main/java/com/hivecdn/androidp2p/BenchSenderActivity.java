@@ -51,6 +51,6 @@ public class BenchSenderActivity extends AppCompatActivity implements VideoPeerC
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bench_sender);
-        vpc = new VideoPeerConnection(MainActivity.context, "http://www.hivecdn.com/benchmark/video.mp4", this);
+        vpc = new VideoPeerConnection(MainActivity.context, "http://www.hivecdn.com/benchmark/video2.mp4", this);
     }
 }
