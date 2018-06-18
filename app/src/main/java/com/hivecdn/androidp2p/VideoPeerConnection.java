@@ -39,7 +39,7 @@ import okio.ByteString;
  * Created by karta on 5/31/2018.
  */
 
-public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection.Observer, SdpObserver, DataChannel.Observer{
+public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserver, DataChannel.Observer{
 
     final String TAG = VideoPeerConnection.class.getName();
     final int MaxNumBytesInSinglePacket = 1024*16; // 16 kbyte
@@ -48,182 +48,85 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
         void onVerbose(String msg);
         void onRequest(int start, int len);
         void onResponse(ByteBuffer buf, int start, int len);
-        void onIdReceived(String ourId);
-        void onConnected(String otherId);
+        //void onConnected(String otherId); // SignalingListener's will get this message via SignalingListener.
     }
 
     boolean creatingOffer;
     String otherPeerId;
     int otherSessionId;
-    String sessionToken;
     String peerId;
     String signalId; // signalId associated with the ongoing handshake.
     int sessionId;
-    WebSocket socket;
-    MyWebSocketProxy proxy;
-    OkHttpClient client;
     PeerConnection peerConnection;
     String url;
     Context context;
     MyInterface iface;
     DataChannel dChannel;
-    ArrayList<JSONObject> candidatesOnHold;
-    ArrayList<JSONObject> ourCandidatesOnHold;
+    SignalingServerConnection ssc;
     boolean receivedAnswer;
 
-    public VideoPeerConnection(Context _context, String _url, MyInterface _iface) {
+    public VideoPeerConnection(SignalingServerConnection _ssc, Context _context, String _url, MyInterface _iface, String _ourPeerId, int _ourSessionId, String _signalId, String _otherPeerId, int _otherSessionId, boolean _creatingOffer, JSONObject offerPayload) {
+        ssc = _ssc;
         context = _context;
         url = _url;
         iface = _iface;
-        proxy = new MyWebSocketProxy(this);
-        candidatesOnHold = new ArrayList<JSONObject>();
-        ourCandidatesOnHold = new ArrayList<JSONObject>();
-        client = new OkHttpClient.Builder()
-                .readTimeout(0,  TimeUnit.MILLISECONDS)
-                .build();
-        getWebsocketAddress();
-    }
-
-    void getWebsocketAddress()
-    {
-        Log.v(TAG, "Getting websocket addresss");
-        Request request = new Request.Builder()
-                .url("https://static.hivecdn.com/host")
-                .build();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                Log.v(TAG, "Failed to get websocket address.");
-                e.printStackTrace();
+        peerId = _ourPeerId;
+        sessionId = _ourSessionId;
+        signalId = _signalId;
+        otherPeerId = _otherPeerId;
+        otherSessionId = _otherSessionId;
+        creatingOffer = _creatingOffer;
+        if (creatingOffer) {
+            peerConnection = createPeerConnection();
+            DataChannel.Init init = new DataChannel.Init();
+            Log.v(TAG, "Creating data channel");
+            dChannel = peerConnection.createDataChannel("VideoPeerConnection", init);
+            if (dChannel == null) {
+                iface.onVerbose("Failed to create data channel.");
+                return;
+            } else
+                dChannel.registerObserver(this);
+            iface.onVerbose("Creating offer description");
+            peerConnection.createOffer(this, new MediaConstraints());
+        }
+        else {
+            peerConnection = createPeerConnection();
+            SessionDescription remoteDesc;
+            try {
+                remoteDesc = new SessionDescription(SessionDescription.Type.OFFER, offerPayload.getJSONObject("payload").getString("sdp"));
             }
-
-            @Override
-            public void onResponse(Call call, final Response response) throws IOException {
-                if (!response.isSuccessful()) {
-                    Log.v(TAG, "Unexpected code while trying to get websocket address:" + response);
-                } else {
-                    String address;
-                    try {
-                        JSONObject jObject = new JSONObject(response.body().string());
-                        address = jObject.getJSONArray("hosts").getJSONObject(0).getString("address");
-                    } catch (JSONException e) {
-                        Log.v(TAG, "JSONException");
-                        return;
-                    }
-                    connectWebSocket(address);
-                }
+            catch (JSONException e) {
+                iface.onVerbose("JSONException");
+                return ;
             }
-        });
+            Log.v(TAG, "Setting remote description");
+            peerConnection.setRemoteDescription(this, remoteDesc);
+            Log.v(TAG, "Creating answer description");
+            peerConnection.createAnswer(this, new MediaConstraints());
+        }
     }
 
-    void connectWebSocket(String s)
-    {
-        final String addr ="wss://"+s+"/ws";
-        Log.v(TAG, "Connecting to websocket: " + addr);
-        Request request = new Request.Builder()
-                .url(addr)
-                .addHeader("Origin", "https://hivecdn.com")
-                .build();
-        client.newWebSocket(request, proxy);
-    }
-
-    @Override
-    public void onOpen(WebSocket webSocket, Response response) {
-        socket = webSocket;
-        Log.v(TAG, "Websocket connected!");
-        sendAuth();
-        setPingTimeout();
-    }
-
-    void setPingTimeout()
-    {
-        new Timer().scheduleAtFixedRate(new TimerTask(){
-            @Override
-            public void run(){
-                if (socket != null)
-                {
-                    socket.send("{\"payload\":{},\"command\":\"bogazici.ping\"}");
-                    Log.v(TAG, "Sending ping message");
-                }
-            }
-        },5000,15000);
-    }
-
-    void sendAuth() {
-        final String encodedUrl = URLEncoder.encode(url);
-        Log.v(TAG, "Sending authentication etc.");
-        socket.send("{\"payload\":{\"siteId\":\"hivecdn-0000-0000-0000\",\"deviceType\":\"androidApp\",\"caps\":{\"webRTCSupport\":true,\"wsSupport\":true}},\"command\":\"bogazici.Authentication\"}");
-        JSONObject msg = new JSONObject();
-        JSONObject payload = new JSONObject();
+    public void onIncomingAnswer(JSONObject payload) {
+        if (peerConnection == null)
+            return ; // No handshake is going on.
+        SessionDescription remoteDesc;
         try {
-            payload.put("url", url);
-            msg.put("command", "VideoURLChanged");
-            msg.put("payload", payload);
-            socket.send(msg.toString());
-            msg = new JSONObject();
-            payload = new JSONObject();
-            payload.put("levelCount", 9);
-            payload.put("segmentCount", 0);
-            payload.put("url", url);
-            payload.put("streamType", "VOD");
-            msg.put("payload", payload);
-            msg.put("command", "peer.VideoDashMeta");
-            socket.send(msg.toString());
-            msg = new JSONObject();
-            payload = new JSONObject();
-            payload.put("videoId", url);
-            payload.put("playing", true);
-            payload.put("playbackSpeed", 1);
-            payload.put("playerPosition", 0);
-            payload.put("persist", true);
-            msg.put("payload", payload);
-            msg.put("command", "PeerPlayerState");
+            /*if (payload.getJSONObject("payload").getString("signalId").equals(signalId) == false) {
+                Log.v(TAG, "Wrong signalId on the answer");
+                return; // Wrong signal id. Ignore.
+            }*/ // SignalingServerConnection will make sure that each VideoPeerConnection will only receive handshake events pertinent to it.
+            remoteDesc = new SessionDescription(SessionDescription.Type.ANSWER, payload.getJSONObject("payload").getString("sdp"));
         }
         catch (JSONException e) {
-            Log.v(TAG, "Unexpected JSONException");
+            Log.v(TAG, "JSONException");
             return ;
         }
-        socket.send(msg.toString());
-        socket.send("{\"payload\":{\"state\":\"playing\",\"currentTime\":0,\"timestamp\":1527689052511,\"isMuted\":false,\"playbackSpeed\":1},\"command\":\"PlayerState\"}");
+        Log.v(TAG, "Setting remote description");
+        receivedAnswer = true;
+        peerConnection.setRemoteDescription(this, remoteDesc);
     }
 
-    void authenticationResponse(JSONObject jObject) {
-        try {
-            jObject = jObject.getJSONObject("payload");
-            peerId = jObject.getString("peerId");
-            sessionId = jObject.getInt("sessionId");
-            iface.onIdReceived(peerId);
-        }
-        catch(JSONException e) {
-            e.printStackTrace();
-            Log.v(TAG, "JSONException");
-        }
-    }
-
-    @Override
-    public void onMessage(WebSocket webSocket, String text) {
-        Log.v(TAG, "Inmsg: " + text);
-
-        String command;
-        JSONObject jObject;
-        try {
-            jObject = new JSONObject(text);
-            command = jObject.getString("command");
-        } catch (JSONException e) {
-            Log.v(TAG, "JSONException");
-            return;
-        }
-        if (command.equals("bogazici.sessionToken"))
-            sessionTokenReceived(jObject);
-        if (command.equals("AuthenticationResponse"))
-            authenticationResponse(jObject);
-        if (command.equals("peer.MakeConnectionWithPeer"))
-            makeConnectionWithPeer(jObject);
-        if (command.equals("peer.WebRTCHandshake"))
-            incomingHandshake(jObject);
-    }
-
-    void incomingOffer(JSONObject payload) {
+    /*void onIncomingOffer(JSONObject payload) {
         Log.v(TAG, "Incoming offer");
         if (peerId == null)
             return; // We don't know our peerId yet.
@@ -244,7 +147,13 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
         catch (JSONException e) {
             Log.v(TAG, "JSONException");
         }
+    }*/
+
+    public void onIncomingCandidate(JSONObject payload) {
+        Log.v(TAG, "Incoming candidate.");
+        addCandidateFromPayload(payload);
     }
+
     public void sendRange(byte[] bytes, int start, int len) {
         if (dChannel == null)
             return ;
@@ -278,10 +187,10 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
         IceCandidate candidate;
         String sdp;
         try {
-            if (payload.getJSONObject("payload").getString("signalId").equals(signalId) == false) {
+            /*if (payload.getJSONObject("payload").getString("signalId").equals(signalId) == false) {
                 Log.v(TAG, "Wrong signalId");
                 return ;
-            }
+            }*/
             if (payload.getString("otherPeerId").equals(otherPeerId) == false) {
                 Log.v(TAG, "Wrong peerId");
                 return ;
@@ -309,180 +218,16 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
         return factory.createPeerConnection(serverList, this);
     }
 
-    void incomingAnswer(JSONObject payload) {
-        Log.v(TAG, "Incoming answer.");
-        if (peerConnection == null)
-            return ; // No handshake is going on.
-        SessionDescription remoteDesc;
-        try {
-            if (payload.getJSONObject("payload").getString("signalId").equals(signalId) == false) {
-                Log.v(TAG, "Wrong signalId on the answer");
-                return; // Wrong signal id. Ignore.
-            }
-            remoteDesc = new SessionDescription(SessionDescription.Type.ANSWER, payload.getJSONObject("payload").getString("sdp"));
-        }
-        catch (JSONException e) {
-            Log.v(TAG, "JSONException");
-            return ;
-        }
-        Log.v(TAG, "Setting remote description");
-        receivedAnswer = true;
-        peerConnection.setRemoteDescription(this, remoteDesc);
-        for (JSONObject msg : ourCandidatesOnHold) {
-            Log.v(TAG, "Sending on hold candidate.");
-            socket.send(msg.toString());
-        }
-        ourCandidatesOnHold.clear();
-    }
-
-    void incomingCandidate(JSONObject payload) {
-        Log.v(TAG, "Incoming candidate.");
-        if (peerConnection == null) {
-            Log.v(TAG, "Putting on hold. No connection yet.");
-            candidatesOnHold.add(payload);
-            //if (candidatesOnHold.size() > 25)
-            //candidatesOnHold.subList(0, 15).clear();
-            return ;
-        }
-        addCandidateFromPayload(payload);
-    }
-
-    void incomingHandshake(JSONObject jObject) {
-        try {
-            jObject = jObject.getJSONObject("payload");
-            if (jObject.getString("type").equals("OFFER")) {
-                incomingOffer(jObject);
-                return;
-            }
-            if (jObject.getString("type").equals("ANSWER")) {
-                incomingAnswer(jObject);
-                return ;
-            }
-            if (jObject.getString("type").equals("CANDIDATE")) {
-                incomingCandidate(jObject);
-                return ;
-            }
-        }
-        catch (JSONException e) {
-            Log.v(TAG, "JSONException");
-        }
-    }
-
-    void makeConnectionWithPeer(JSONObject res) {
-        Log.v(TAG, "makeConnectionWithPeer");
-        if (peerId == null)
-            return; // We don't know our peerId yet.
-        if (peerConnection != null) // There already is a connection.
-            return;
-        try {
-            res = res.getJSONObject("payload");
-            String uploaderPeerId = res.getString("uploaderPeerId");
-            String downloaderPeerId = res.getString("downloaderPeerId");
-            int uploaderSessionId = res.getInt("uploaderSessionId");
-            int downloaderSessionId = res.getInt("downloaderSessionId");
-            if (peerId.equals(uploaderPeerId)) {
-                otherPeerId = downloaderPeerId;
-                otherSessionId = downloaderSessionId;
-            } else if (peerId.equals(downloaderPeerId)) {
-                otherPeerId = uploaderPeerId;
-                otherSessionId = uploaderSessionId;
-            }
-            creatingOffer = true;
-            peerConnection = createPeerConnection();
-            DataChannel.Init init = new DataChannel.Init();
-            Log.v(TAG, "Creating data channel");
-            dChannel = peerConnection.createDataChannel("test", init);
-            if (dChannel == null) {
-                Log.v(TAG, "Failed to create data channel.");
-                return;
-            } else
-                dChannel.registerObserver(this);
-            Log.v(TAG, "Creating offer description");
-            peerConnection.createOffer(this, new MediaConstraints());
-        } catch (JSONException e) {
-            Log.v(TAG, "JSONException");
-            return;
-        }
-    }
-
-    void sessionTokenReceived(JSONObject res) {
-        try {
-            sessionToken = res.getJSONObject("payload").getString("sessionToken");
-        }
-        catch (JSONException e) {
-            Log.v(TAG, "JSONException");
-        }
-    }
-
-
-    @Override
-    public void onMessage(WebSocket webSocket, ByteString bytes) {
-        Log.v(TAG, "Binary message received");
-    }
-
-    @Override
-    public void onClosing(WebSocket webSocket, int code, String reason) {
-
-    }
-
-    @Override
-    public void onClosed(WebSocket webSocket, int code, String reason) {
-        Log.v(TAG, "Closed");
-    }
-
-    @Override
-    public void onFailure(WebSocket webSocket, Throwable t, @Nullable Response response) {
-        Log.v(TAG, "Error");
-        t.printStackTrace();
-    }
-
     @Override
     public void onCreateSuccess(SessionDescription origSdp) {
         Log.v(TAG, "Created sdp, setting local descr.");
         peerConnection.setLocalDescription(this, origSdp);
-        JSONObject message;
-        try {
-            JSONObject innerPayload = new JSONObject();
-            innerPayload.put("remoteVersion", "2.2.7-SNAPSHOT");
-            innerPayload.put("sdp", origSdp.description);
-            if (creatingOffer) {
-                signalId = UUID.randomUUID().toString();
-                innerPayload.put("type", "offer");
-            }
-            else
-                innerPayload.put("type", "answer");
-            innerPayload.put("signalId", signalId);
-            JSONObject payload = new JSONObject();
-            payload.put("otherPeerId", otherPeerId);
-            payload.put("otherSessionId", otherSessionId);
-            if (creatingOffer)
-                payload.put("type", "OFFER");
-            else
-                payload.put("type", "ANSWER");
-            payload.put("payload", innerPayload);
-            message = new JSONObject();
-            message.put("command", "peer.WebRTCHandshake");
-            message.put("payload", payload);
-        }
-        catch (JSONException e) {
-            Log.v(TAG, "Unexpected JSONException");
-            return ;
-        }
-        if (creatingOffer)
-            Log.v(TAG, "Sending offer.");
-        else
-            Log.v(TAG, "Sending answer.");
-        Log.v(TAG, "Sending: " + message.toString());
-        socket.send(message.toString());
+        ssc.onGotSDP(this, origSdp);
     }
 
     @Override
     public void onSetSuccess() {
         Log.v(TAG, "onSetSuccess");
-        for (JSONObject payload : candidatesOnHold) {
-            addCandidateFromPayload(payload);
-        }
-        candidatesOnHold.clear();
     }
 
     @Override
@@ -504,7 +249,7 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
     public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
         Log.v(TAG, "onIceConnectionChange: " + iceConnectionState.name());
         if (iceConnectionState == PeerConnection.IceConnectionState.CONNECTED) {
-            //  iface.onConnected(otherPeerId);
+            //ssc.onPeerConnected(this); // We need to wait for the data channel.
         }
         else if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
             iface.onVerbose("Disconnected");
@@ -512,9 +257,7 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
             signalId = null;
             peerConnection = null;
             dChannel = null;
-            candidatesOnHold.clear();
-            ourCandidatesOnHold.clear();
-        }
+            }
     }
 
     @Override
@@ -530,36 +273,7 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
     @Override
     public void onIceCandidate(IceCandidate iceCandidate) {
         Log.v(TAG, "onIceCandidate");
-        JSONObject message;
-        try {
-            JSONObject innerPayload = new JSONObject();
-            innerPayload.put("remoteVersion", "2.2.7-SNAPSHOT");
-            innerPayload.put("sdpMLineIndex", iceCandidate.sdpMLineIndex);
-            innerPayload.put("sdpMid", iceCandidate.sdpMid);
-            innerPayload.put("candidate", iceCandidate.sdp);
-            innerPayload.put("signalId", signalId);
-            JSONObject payload = new JSONObject();
-            payload.put("otherPeerId", otherPeerId);
-            payload.put("otherSessionId", otherSessionId);
-            payload.put("type", "CANDIDATE");
-            payload.put("payload", innerPayload);
-            message = new JSONObject();
-            message.put("command", "peer.WebRTCHandshake");
-            message.put("payload", payload);
-        }
-        catch (JSONException e) {
-            Log.v(TAG, "Unexpected JSONException");
-            return ;
-        }
-        if (creatingOffer && receivedAnswer==false) {
-            Log.v(TAG, "Putting candidate on hold.");
-            ourCandidatesOnHold.add(message);
-        }
-        else {
-            Log.v(TAG, "Sending ice candidate");
-            Log.v(TAG, "Sending: " + message.toString());
-            socket.send(message.toString());
-        }
+        ssc.onGotIceCandidate(this, iceCandidate);
     }
 
     @Override
@@ -604,7 +318,7 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
     public void onStateChange() {
         Log.v(TAG, "onStateChange: " + (dChannel == null ? "null" : dChannel.state().name()));
         if (dChannel != null && dChannel.state() == DataChannel.State.OPEN)
-            iface.onConnected(otherPeerId);
+            ssc.onPeerConnected(this);
     }
 
     @Override
@@ -638,8 +352,6 @@ public class VideoPeerConnection implements  MyWebSocketListener, PeerConnection
     }
 
     public void close() {
-        if (socket != null)
-            socket.close(1000, null);
         if (peerConnection != null)
             peerConnection.close();
     }

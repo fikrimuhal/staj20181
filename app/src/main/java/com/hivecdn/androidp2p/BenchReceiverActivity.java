@@ -12,12 +12,13 @@ import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.Date;
 
-public class BenchReceiverActivity extends AppCompatActivity implements VideoPeerConnection.MyInterface, View.OnClickListener{
+public class BenchReceiverActivity extends AppCompatActivity implements VideoPeerConnection.MyInterface, View.OnClickListener, SignalingServerConnection.SignalingListener{
 
     final String TAG = BenchReceiverActivity.class.getName();
 
     final long MinDisplayUpdateInterval = 250;
 
+    SignalingServerConnection ssc;
     VideoPeerConnection vpc;
     EditText editText;
     TextView logView;
@@ -35,12 +36,35 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
         goButton = findViewById(R.id.goButton);
         goButton.setOnClickListener(this);
         goButton.setEnabled(false);
-        vpc = new VideoPeerConnection(MainActivity.context, "http://www.hivecdn.com/benchmark/video2.mp4", this);
+        ssc = new SignalingServerConnection(MainActivity.context, this, this, "http://www.hivecdn.com/benchmark/video2.mp4");
+        //vpc = new VideoPeerConnection(MainActivity.context, "http://www.hivecdn.com/benchmark/video2.mp4", this);
     }
 
     @Override
     public void onVerbose(String msg) {
         Log.v(TAG, msg);
+    }
+
+    @Override
+    public void onIdReceived(String ourPeerId, int ourSessionId) {
+        // Cool
+    }
+
+    @Override
+    public void onNewPeer(VideoPeerConnection _vpc) {
+        if (vpc != null) {
+            _vpc.close(); // TODO: Instead of closing connections after establishing them, we should reject before handshake starts.
+            return ;
+        }
+        vpc = _vpc;
+        Log.v(TAG, "Connected to peer id: " + vpc.otherPeerId);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                startRound();
+                //goButton.setEnabled(true);
+            }
+        });
     }
 
     @Override
@@ -79,29 +103,12 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
         });
     }
 
-    @Override
-    public void onIdReceived(String ourId) {
-        Log.v(TAG, "Our id is: " + ourId);
-    }
-
     void startRound() {
         numBytesLeft = 10000000; // 10 mb
         editText.setText(String.valueOf(numBytesLeft));
         startTime = Calendar.getInstance().getTimeInMillis();
         lastDisplayUpdateTime = startTime;
         vpc.requestRange(0, numBytesLeft);
-    }
-
-    @Override
-    public void onConnected(String otherId) {
-        Log.v(TAG, "Connected to peer id: " + otherId);
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                startRound();
-                //goButton.setEnabled(true);
-            }
-        });
     }
 
     @Override

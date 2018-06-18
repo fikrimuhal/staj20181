@@ -20,7 +20,7 @@ import scala.NotImplementedError;
 
 import static com.google.android.exoplayer2.C.LENGTH_UNSET;
 
-public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterface {
+public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterface, SignalingServerConnection.SignalingListener {
 
     private final String TAG = P2PDataSource.class.getName();
 
@@ -43,6 +43,7 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
 
     DataSpec dataSpec;
     VideoPeerConnection vpc;
+    SignalingServerConnection ssc;
     int pos = 0;
     TreeSet<Triad> triads;
 
@@ -53,6 +54,22 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
     @Override
     public void onVerbose(String msg) {
         Log.v(TAG, msg);
+    }
+
+    @Override
+    public void onIdReceived(String ourPeerId, int ourSessionId) {
+        // Cool
+    }
+
+    @Override
+    public void onNewPeer(VideoPeerConnection _vpc) {
+        if (vpc != null) {
+            _vpc.close();
+            return ;
+        }
+        vpc = _vpc;
+        Log.v(TAG, "Requesting range [" + dataSpec.position + "," + (dataSpec.position+dataSpec.length) + ")");
+        vpc.requestRange((int)dataSpec.position, (int)dataSpec.length);
     }
 
     @Override
@@ -72,17 +89,6 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
     }
 
     @Override
-    public void onIdReceived(String ourId) {
-
-    }
-
-    @Override
-    public void onConnected(String otherId) {
-        Log.v(TAG, "Requesting range [" + dataSpec.position + "," + (dataSpec.position+dataSpec.length) + ")");
-        vpc.requestRange((int)dataSpec.position, (int)dataSpec.length);
-    }
-
-    @Override
     public long open(DataSpec _dataSpec) throws IOException {
         dataSpec = _dataSpec;
         pos = (int)dataSpec.position;
@@ -90,7 +96,8 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
         synchronized (triads) {
             triads.clear();
         }
-        vpc = new VideoPeerConnection(MainActivity.context, dataSpec.uri.toString(), this);
+        ssc = new SignalingServerConnection(MainActivity.context, this, this, dataSpec.uri.toString());
+        //vpc = new VideoPeerConnection(MainActivity.context, dataSpec.uri.toString(), this);
         return LENGTH_UNSET;
     }
 

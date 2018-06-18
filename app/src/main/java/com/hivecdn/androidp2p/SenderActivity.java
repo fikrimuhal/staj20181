@@ -11,7 +11,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-public class SenderActivity extends AppCompatActivity implements VideoPeerConnection.MyInterface {
+public class SenderActivity extends AppCompatActivity implements VideoPeerConnection.MyInterface, SignalingServerConnection.SignalingListener {
+    @Override
+    public void onIdReceived(String ourPeerId, int ourSessionId) {
+        // Cool
+    }
+
+    @Override
+    public void onNewPeer(VideoPeerConnection _vpc) {
+        if (vpc != null) {
+            _vpc.close();
+            return ;
+        }
+        vpc = _vpc;
+        // We wait for the receiver to request ranges.
+    }
 
     final String TAG = SenderActivity.class.getName();
 
@@ -50,23 +64,15 @@ public class SenderActivity extends AppCompatActivity implements VideoPeerConnec
         return ; // Sender only sends.
     }
 
-    @Override
-    public void onIdReceived(String ourId) {
-        Log.v(TAG, "Our id is: " + ourId);
-    }
-
-    @Override
-    public void onConnected(String otherId) {
-        Log.v(TAG, "Connected to id: " + otherId);
-    }
-
     VideoPeerConnection vpc;
+    SignalingServerConnection ssc;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sender);
-        vpc = new VideoPeerConnection(MainActivity.context, MainActivity.context.getString(R.string.content_url), this);
+        ssc = new SignalingServerConnection(MainActivity.context, this, this, MainActivity.context.getString(R.string.content_url));
+        //vpc = new VideoPeerConnection(MainActivity.context, MainActivity.context.getString(R.string.content_url), this);
         mngr = getAssets();
     }
 }
