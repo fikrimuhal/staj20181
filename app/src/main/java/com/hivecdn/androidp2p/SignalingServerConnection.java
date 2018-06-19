@@ -33,7 +33,7 @@ public class SignalingServerConnection implements MyWebSocketListener {
     final String TAG = SignalingServerConnection.class.getName();
 
     public interface SignalingListener {
-        void onVerbose(String msg);
+        //void onVerbose(String msg);
         void onIdReceived(String ourPeerId, int ourSessionId);
         //void onConnectionEncouraged(String otherId);
         //void onIncomingOffer(String otherId);
@@ -223,22 +223,22 @@ public class SignalingServerConnection implements MyWebSocketListener {
             peersMap.remove(signalId);
             return null;
         }
-        sListener.onVerbose("Redirecting incoming candidate/answer to the pertinent VideoPeerConnection instance.");
+        Log.v(TAG, "Redirecting incoming candidate/answer to the pertinent VideoPeerConnection instance.");
         return vpc;
     }
 
     void incomingCandidate(JSONObject payload) {
-        sListener.onVerbose("Incoming candidate.");
+        Log.v(TAG, "Incoming candidate.");
         try {
             String signalId = payload.getJSONObject("payload").getString("signalId");
             VideoPeerConnection vpc = getVPCFromSignalId(signalId);
             if (vpc != null)
                 vpc.onIncomingCandidate(payload);
             else
-                sListener.onVerbose("An unknown peer sent a candidate. Ignoring.");
+                Log.v(TAG, "An unknown peer sent a candidate. Ignoring.");
         }
         catch (JSONException e) {
-            sListener.onVerbose("JSONException");
+            Log.v(TAG, "JSONException");
         }
     }
 
@@ -271,10 +271,10 @@ public class SignalingServerConnection implements MyWebSocketListener {
             if (vpc != null)
                 vpc.onIncomingAnswer(payload); // TODO: To better isolate signaling logic from webrtc logic, do not pass raw json to VPC's. Instead, only pass stuff related to webrtc.
             else
-                sListener.onVerbose("An unknown peer sent an answer. Ignoring.");
+                Log.v(TAG, "An unknown peer sent an answer. Ignoring.");
         }
         catch (JSONException e) {
-            sListener.onVerbose("JSONException");
+            Log.v(TAG, "JSONException");
         }
     }
 
@@ -287,7 +287,7 @@ public class SignalingServerConnection implements MyWebSocketListener {
             String otherPeerId = payload.getString("otherPeerId");
             String signalId = payload.getJSONObject("payload").getString("signalId");
             if (getVPCFromSignalId(signalId) != null) {
-                sListener.onVerbose("A known peer sent an offer. Ignoring.");
+                Log.v(TAG, "A known peer sent an offer. Ignoring.");
                 return ;
             }
             VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, false, payload); // TODO: Do not pass JSON to the VPC. It only needs to sdp.
@@ -321,11 +321,11 @@ public class SignalingServerConnection implements MyWebSocketListener {
                 otherSessionId = uploaderSessionId;
             }
             else {
-                sListener.onVerbose("Got unrelated handshake encouragement.");
+                Log.v(TAG, "Got unrelated handshake encouragement.");
                 return ;
             }
             if (getVPCFromSignalId(signalId) != null) {
-                sListener.onVerbose("A known peer sent an offer. Ignoring.");
+                Log.v(TAG, "A known peer sent an offer. Ignoring.");
                 return ;
             }
             VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, true, res); // TODO: Do not pass JSON to the VPC. It only needs to sdp.
@@ -420,8 +420,8 @@ public class SignalingServerConnection implements MyWebSocketListener {
             Log.v(TAG, "Unexpected JSONException");
             return ;
         }
-        sListener.onVerbose("Sending ice candidate");
-        sListener.onVerbose("Sending: " + message.toString());
+        Log.v(TAG, "Sending ice candidate");
+        Log.v(TAG, "Sending: " + message.toString());
         socket.send(message.toString());
     }
 

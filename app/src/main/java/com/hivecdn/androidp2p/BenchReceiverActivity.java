@@ -17,6 +17,7 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
     final String TAG = BenchReceiverActivity.class.getName();
 
     final long MinDisplayUpdateInterval = 250;
+    final int BenchDataSize = 10*1024*1024; // 10mb
 
     SignalingServerConnection ssc;
     VideoPeerConnection vpc;
@@ -41,18 +42,13 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
     }
 
     @Override
-    public void onVerbose(String msg) {
-        Log.v(TAG, msg);
-    }
-
-    @Override
     public void onIdReceived(String ourPeerId, int ourSessionId) {
         // Cool
     }
 
     @Override
     public void onNewPeer(VideoPeerConnection _vpc) {
-        if (vpc != null) {
+        if (vpc != null) { // Hope that the first peer we connect to will be a sender. TODO: Fix this.
             _vpc.close(); // TODO: Instead of closing connections after establishing them, we should reject before handshake starts.
             return ;
         }
@@ -98,7 +94,8 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
                 if (numBytesLeft == 0) {
                     //editText.setEnabled(true);
                     //goButton.setEnabled(true);
-                    logView.append("Took " + (curTime-startTime) + " ms.\n");
+                    //logView.append("Took " + (curTime-startTime) + " ms.\n");
+                    logView.append("Result: " + 8.0*1000*BenchDataSize/1024/1024/(curTime-startTime) + " megabit/sn.\n");
                     startRound();
                 }
                 else {
@@ -112,7 +109,7 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
     }
 
     void startRound() {
-        numBytesLeft = 10000000; // 10 mb
+        numBytesLeft = BenchDataSize;
         editText.setText(String.valueOf(numBytesLeft));
         startTime = Calendar.getInstance().getTimeInMillis();
         lastDisplayUpdateTime = startTime;

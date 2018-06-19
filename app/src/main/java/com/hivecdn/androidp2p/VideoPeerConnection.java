@@ -45,7 +45,7 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
     final int MaxNumBytesInSinglePacket = 1024*16; // 16 kbyte
 
     public interface MyInterface {
-        void onVerbose(String msg);
+        //void onVerbose(String msg);
         void onRequest(VideoPeerConnection vpc, int start, int len);
         void onResponse(VideoPeerConnection vpc, ByteBuffer buf, int start, int len);
         //void onConnected(String otherId); // SignalingListener's will get this message via SignalingListener.
@@ -82,11 +82,11 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
             Log.v(TAG, "Creating data channel");
             dChannel = peerConnection.createDataChannel("VideoPeerConnection", init);
             if (dChannel == null) {
-                iface.onVerbose("Failed to create data channel.");
+                Log.v(TAG, "Failed to create data channel.");
                 return;
             } else
                 dChannel.registerObserver(this);
-            iface.onVerbose("Creating offer description");
+            Log.v(TAG, "Creating offer description");
             peerConnection.createOffer(this, new MediaConstraints());
         }
         else {
@@ -96,7 +96,7 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
                 remoteDesc = new SessionDescription(SessionDescription.Type.OFFER, offerPayload.getJSONObject("payload").getString("sdp"));
             }
             catch (JSONException e) {
-                iface.onVerbose("JSONException");
+                Log.v(TAG, "JSONException");
                 return ;
             }
             Log.v(TAG, "Setting remote description");
@@ -168,7 +168,7 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
             /*StringBuilder sb = new StringBuilder();
             for (int i = 0; i < 15; i++)
                 sb.append(all.get(i));
-            iface.onVerbose("sendRange: Message to be sent: " + sb.toString());*/
+            Log.v(TAG, "sendRange: Message to be sent: " + sb.toString());*/
             dChannel.send(new DataChannel.Buffer(all, true));
             numBytesSent += thisTimeNumBytesSent;
         }
@@ -176,7 +176,7 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
 
     public void requestRange(int start, int len) {
         if (dChannel == null) {
-            iface.onVerbose("Can't send message, dChannel == null");
+            Log.v(TAG, "Can't send message, dChannel == null");
             return;
         }
         ByteBuffer header = new RangeRequest(start, len).toBinary();
@@ -252,7 +252,7 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
             //ssc.onPeerConnected(this); // We need to wait for the data channel.
         }
         else if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
-            iface.onVerbose("Disconnected");
+            Log.v(TAG, "Disconnected");
             otherPeerId = null;
             signalId = null;
             peerConnection = null;
@@ -330,7 +330,7 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
     @Override
     public void onMessage(DataChannel.Buffer buffer) {
         if (buffer.binary == false) {
-            iface.onVerbose("Invalid message recevied, must be binary.");
+            Log.v(TAG, "Invalid message recevied, must be binary.");
             return ;
         }
         P2PProtocolMessage msg = null;
@@ -338,11 +338,11 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
             msg = P2PProtocolMessage.fromBinary(buffer.data);
         }
         catch (IllegalArgumentException e) {
-            iface.onVerbose("Invalid message recevied.");
+            Log.v(TAG, "Invalid message recevied.");
             return ;
         }
         if (msg instanceof RangeRequest) {
-            iface.onVerbose("Got new request");
+            Log.v(TAG, "Got new request");
             iface.onRequest(this, ((RangeRequest) msg).start, ((RangeRequest) msg).len);
         }
         else if (msg instanceof RangeResponse) {

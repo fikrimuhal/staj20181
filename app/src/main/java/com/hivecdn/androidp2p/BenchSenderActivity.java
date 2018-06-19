@@ -29,11 +29,6 @@ public class BenchSenderActivity extends AppCompatActivity implements VideoPeerC
     }
 
     @Override
-    public void onVerbose(String msg) {
-        Log.v(TAG, msg);
-    }
-
-    @Override
     public void onRequest(VideoPeerConnection vpc, int start, int len) {
         while (len > 0) {
             final int lenThisTime = min(1024*1024, len);

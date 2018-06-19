@@ -41,11 +41,6 @@ public class SenderActivity extends AppCompatActivity implements VideoPeerConnec
         threads.remove(vpc.signalId);
     }
 
-    @Override
-    public void onVerbose(String msg) {
-        Log.v(TAG, msg);
-    }
-
     public static void onRequestRunner(VideoPeerConnection vpc, int start, int len) {
         Log.v(TAG, "Got request [" + start + "," + (start+len) + ")");
         try {

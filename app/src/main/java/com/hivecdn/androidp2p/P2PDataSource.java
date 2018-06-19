@@ -53,18 +53,13 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
     }
 
     @Override
-    public void onVerbose(String msg) {
-        Log.v(TAG, msg);
-    }
-
-    @Override
     public void onIdReceived(String ourPeerId, int ourSessionId) {
         // Cool
     }
 
     @Override
     public void onNewPeer(VideoPeerConnection _vpc) {
-        if (vpc != null) {
+        if (vpc != null) { // Hope that the first peer we connect to will be a sender. TODO: Fix this.
             _vpc.close();
             return ;
         }
@@ -90,6 +85,10 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
         if (vpc != _vpc)
             return ;
         Log.v(TAG, "Received range [" + start + "," + (start+len) + ")");
+        if (start+len < pos) {
+            Log.v(TAG, "We're already past that byte, ignoring...");
+            return ;
+        }
         synchronized (triads) {
             triads.add(new Triad(buf.slice(), start, len));
             Log.v(TAG, "Size of the set after the addition: " + triads.size());
