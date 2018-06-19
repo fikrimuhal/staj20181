@@ -48,6 +48,7 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
     TreeSet<Triad> triads;
 
     P2PDataSource() {
+        Log.v(TAG, "New P2PDataSource");
         triads = new TreeSet<Triad>();
     }
 
@@ -73,13 +74,21 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
     }
 
     @Override
-    public void onRequest(int start, int len) {
+    public void onPeerDisconnected(VideoPeerConnection _vpc) {
+        if (vpc == _vpc)
+            vpc = null;
+    }
+
+    @Override
+    public void onRequest(VideoPeerConnection _vpc, int start, int len) {
         return ; // Do nothing. We're the receiver, we have no data.
         // TODO: In a real application, there must be no 'receiver' or 'transmitter'. All sides must keep chunks of video in memory and respond to all requests they can.
     }
 
     @Override
-    public void onResponse(ByteBuffer buf, int start, int len) {
+    public void onResponse(VideoPeerConnection _vpc, ByteBuffer buf, int start, int len) {
+        if (vpc != _vpc)
+            return ;
         Log.v(TAG, "Received range [" + start + "," + (start+len) + ")");
         synchronized (triads) {
             triads.add(new Triad(buf.slice(), start, len));
@@ -96,14 +105,21 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
         synchronized (triads) {
             triads.clear();
         }
-        ssc = new SignalingServerConnection(MainActivity.context, this, this, dataSpec.uri.toString());
+        if (ssc == null)
+            ssc = new SignalingServerConnection(MainActivity.context, this, this, dataSpec.uri.toString());
+        else if (vpc != null) {
+            Log.v(TAG, "Requesting range [" + dataSpec.position + "," + (dataSpec.position+dataSpec.length) + ")");
+            vpc.requestRange((int)dataSpec.position, (int)dataSpec.length);
+        }
+        else
+            Log.v(TAG,"Whoops");
         //vpc = new VideoPeerConnection(MainActivity.context, dataSpec.uri.toString(), this);
         return LENGTH_UNSET;
     }
 
     @Override
     public int read(byte[] buffer, int offset, int readLength) throws IOException {
-        //Log.v(TAG, "read: pos: " + pos + "readLength: " + readLength);
+        Log.v(TAG, "read: pos: " + pos + "readLength: " + readLength);
         Triad bestMatch;
         synchronized (triads) {
             while (true) {
@@ -146,6 +162,14 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
 
     @Override
     public void close() throws IOException {
-        vpc.close();
+        Log.v(TAG, "closing");
+        if (vpc != null) {
+            vpc.close();
+            vpc = null;
+        }
+        if (ssc != null) {
+            ssc.close();
+            ssc = null;
+        }
     }
 }

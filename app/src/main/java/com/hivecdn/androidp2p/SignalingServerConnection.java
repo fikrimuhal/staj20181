@@ -38,6 +38,7 @@ public class SignalingServerConnection implements MyWebSocketListener {
         //void onConnectionEncouraged(String otherId);
         //void onIncomingOffer(String otherId);
         void onNewPeer(VideoPeerConnection vpc);
+        void onPeerDisconnected(VideoPeerConnection vpc);
     }
 
 
@@ -426,5 +427,10 @@ public class SignalingServerConnection implements MyWebSocketListener {
 
     void onPeerConnected(VideoPeerConnection vpc) {
         sListener.onNewPeer(vpc);
+    }
+
+    void onPeerDisconnected(VideoPeerConnection vpc) {
+        peersMap.remove(vpc.signalId);
+        sListener.onPeerDisconnected(vpc);
     }
 }

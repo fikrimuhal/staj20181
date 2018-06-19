@@ -46,8 +46,8 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
 
     public interface MyInterface {
         void onVerbose(String msg);
-        void onRequest(int start, int len);
-        void onResponse(ByteBuffer buf, int start, int len);
+        void onRequest(VideoPeerConnection vpc, int start, int len);
+        void onResponse(VideoPeerConnection vpc, ByteBuffer buf, int start, int len);
         //void onConnected(String otherId); // SignalingListener's will get this message via SignalingListener.
     }
 
@@ -316,9 +316,15 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
 
     @Override
     public void onStateChange() {
-        Log.v(TAG, "onStateChange: " + (dChannel == null ? "null" : dChannel.state().name()));
-        if (dChannel != null && dChannel.state() == DataChannel.State.OPEN)
+        if (dChannel == null) {
+            Log.v(TAG, "onStateChange: dChannel == null");
+            return ;
+        }
+        Log.v(TAG, "onStateChange: " + dChannel.state().name());
+        if (dChannel.state() == DataChannel.State.OPEN)
             ssc.onPeerConnected(this);
+        else if (dChannel.state() == DataChannel.State.CLOSED)
+            ssc.onPeerDisconnected(this);
     }
 
     @Override
@@ -337,7 +343,7 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
         }
         if (msg instanceof RangeRequest) {
             iface.onVerbose("Got new request");
-            iface.onRequest(((RangeRequest) msg).start, ((RangeRequest) msg).len);
+            iface.onRequest(this, ((RangeRequest) msg).start, ((RangeRequest) msg).len);
         }
         else if (msg instanceof RangeResponse) {
             if (((RangeResponse) msg).len != buffer.data.remaining()) {
@@ -347,7 +353,7 @@ public class VideoPeerConnection implements  PeerConnection.Observer, SdpObserve
             ByteBuffer data = ByteBuffer.allocate(buffer.data.remaining());
             data.put(buffer.data);
             data.position(0);
-            iface.onResponse(data, ((RangeResponse) msg).start, ((RangeResponse) msg).len);
+            iface.onResponse(this, data, ((RangeResponse) msg).start, ((RangeResponse) msg).len);
         }
     }
 

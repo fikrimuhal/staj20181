@@ -68,12 +68,20 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
     }
 
     @Override
-    public void onRequest(int start, int len) {
+    public void onPeerDisconnected(VideoPeerConnection _vpc) {
+        if (vpc == _vpc)
+            vpc = null;
+    }
+
+    @Override
+    public void onRequest(VideoPeerConnection _vpc, int start, int len) {
         ; // Do nothing. We're the sender.
     }
 
     @Override
-    public void onResponse(ByteBuffer buf, int start, int len) {
+    public void onResponse(VideoPeerConnection _vpc, ByteBuffer buf, int start, int len) {
+        if (vpc != _vpc)
+            return ;
         Log.v(TAG, "Received range [" + start + ", " + (start+len) + ")");
         for (int i=start, j=0; i<len; i++, j++) {
             if (buf.get(j) != (byte)i)

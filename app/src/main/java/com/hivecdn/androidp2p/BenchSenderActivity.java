@@ -12,7 +12,6 @@ public class BenchSenderActivity extends AppCompatActivity implements VideoPeerC
 
     final String TAG = BenchSenderActivity.class.getName();
 
-    VideoPeerConnection vpc;
     SignalingServerConnection ssc;
 
     @Override
@@ -22,11 +21,11 @@ public class BenchSenderActivity extends AppCompatActivity implements VideoPeerC
 
     @Override
     public void onNewPeer(VideoPeerConnection _vpc) {
-        if (vpc != null) {
-            vpc.close();
-            return ;
-        }
-        vpc = _vpc; // We don't do anything at this point. The sender waits for the receiver to receive a range.
+        // We don't do anything at this point. The sender waits for the receiver to receive a range.
+    }
+
+    @Override
+    public void onPeerDisconnected(VideoPeerConnection _vpc) {
     }
 
     @Override
@@ -35,7 +34,7 @@ public class BenchSenderActivity extends AppCompatActivity implements VideoPeerC
     }
 
     @Override
-    public void onRequest(int start, int len) {
+    public void onRequest(VideoPeerConnection vpc, int start, int len) {
         while (len > 0) {
             final int lenThisTime = min(1024*1024, len);
             byte[] buf = new byte[lenThisTime];
@@ -48,7 +47,7 @@ public class BenchSenderActivity extends AppCompatActivity implements VideoPeerC
     }
 
     @Override
-    public void onResponse(ByteBuffer buf, int start, int len) {
+    public void onResponse(VideoPeerConnection vpc, ByteBuffer buf, int start, int len) {
         ; // Don't do anything. We're the sender.
     }
 
