@@ -33,6 +33,7 @@ package com.hivecdn.androidp2p;
  * #L%
  */
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import java.io.IOException;
@@ -94,11 +95,21 @@ public class SimpleWebServer extends NanoHTTPD {
             msg += "<p>Hello, " + parms.get("username") + "!</p>";
         }
         return Response.newFixedLengthResponse(msg + "</body></html>\n");*/
+
         return Response.newChunkedResponse(Status.OK, "text/plain", new InputStream() {
             int i=0;
             @Override
+            public int read(@NonNull byte[] b, int off, int len) throws IOException {
+                for (int x=0;x<len;x++)
+                    //b[off+x] = (byte)(i++);
+                    b[off+x] = 1;
+                return len;
+            }
+
+            @Override
             public int read() throws IOException {
-                return i++;
+                //return (byte)(i++);
+                return 1;
             }
         });
     }
