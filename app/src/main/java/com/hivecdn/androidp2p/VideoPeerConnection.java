@@ -109,7 +109,8 @@ public class VideoPeerConnection extends WebRtcPeerConnection {
             ByteBuffer data = ByteBuffer.allocate(buffer.data.remaining());
             data.put(buffer.data);
             data.position(0);
-            iface.onResponse(this, data, ((RangeResponse) msg).start, ((RangeResponse) msg).len);
+            iface.onResponse(this, data, ((RangeResponse) msg).start, ((RangeResponse) msg).len); // It seems webrtc library mutates the contents of the buffer after we return. The line below doesn't work properly.
+            //iface.onResponse(this, buffer.data.slice(), ((RangeResponse) msg).start, ((RangeResponse) msg).len);
         }
     }
 }

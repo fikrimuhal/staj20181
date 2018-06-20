@@ -113,8 +113,6 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.VideoPeerC
             Log.v(TAG, "Requesting range [" + dataSpec.position + "," + (dataSpec.position+dataSpec.length) + ")");
             vpc.requestRange((int)dataSpec.position, (int)dataSpec.length);
         }
-        else
-            Log.v(TAG,"Whoops");
         //vpc = new VideoPeerConnection(MainActivity.context, dataSpec.uri.toString(), this);
         return LENGTH_UNSET;
     }
@@ -164,7 +162,7 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.VideoPeerC
 
     @Override
     public void close() throws IOException {
-        Log.v(TAG, "closing");
+        /*Log.v(TAG, "closing");
         if (vpc != null) {
             vpc.close();
             vpc = null;
@@ -172,6 +170,6 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.VideoPeerC
         if (ssc != null) {
             ssc.close();
             ssc = null;
-        }
+        }*/
     }
 }
