@@ -215,26 +215,26 @@ public class SignalingServerConnection implements MyWebSocketListener {
         }*/
     }
 
-    VideoPeerConnection getVPCFromSignalId(String signalId) {
+    WebRtcPeerConnection getPCFromSignalId(String signalId) {
         WeakReference ref = peersMap.get(signalId);
         if (ref == null)
             return null;
-        VideoPeerConnection vpc = (VideoPeerConnection) ref.get();
-        if (vpc == null) {
+        WebRtcPeerConnection pc = (WebRtcPeerConnection) ref.get();
+        if (pc == null) {
             peersMap.remove(signalId);
             return null;
         }
-        Log.v(TAG, "Redirecting incoming candidate/answer to the pertinent VideoPeerConnection instance.");
-        return vpc;
+        Log.v(TAG, "Redirecting incoming candidate/answer to the pertinent WebRtcPeerConnection instance.");
+        return pc;
     }
 
     void incomingCandidate(JSONObject payload) {
         Log.v(TAG, "Incoming candidate.");
         try {
             String signalId = payload.getJSONObject("payload").getString("signalId");
-            VideoPeerConnection vpc = getVPCFromSignalId(signalId);
-            if (vpc != null)
-                vpc.onIncomingCandidate(payload);
+            WebRtcPeerConnection pc = getPCFromSignalId(signalId);
+            if (pc != null)
+                pc.onIncomingCandidate(payload);
             else
                 Log.v(TAG, "An unknown peer sent a candidate. Ignoring.");
         }
@@ -268,9 +268,9 @@ public class SignalingServerConnection implements MyWebSocketListener {
         Log.v(TAG, "Incoming answer.");
         try {
             String signalId = payload.getJSONObject("payload").getString("signalId");
-            VideoPeerConnection vpc = getVPCFromSignalId(signalId);
-            if (vpc != null)
-                vpc.onIncomingAnswer(payload); // TODO: To better isolate signaling logic from webrtc logic, do not pass raw json to VPC's. Instead, only pass stuff related to webrtc.
+            WebRtcPeerConnection pc = getPCFromSignalId(signalId);
+            if (pc != null)
+                pc.onIncomingAnswer(payload); // TODO: To better isolate signaling logic from webrtc logic, do not pass raw json to PC's. Instead, only pass stuff related to webrtc.
             else
                 Log.v(TAG, "An unknown peer sent an answer. Ignoring.");
         }
@@ -287,11 +287,11 @@ public class SignalingServerConnection implements MyWebSocketListener {
             int otherSessionId = payload.getInt("otherSessionId");
             String otherPeerId = payload.getString("otherPeerId");
             String signalId = payload.getJSONObject("payload").getString("signalId");
-            if (getVPCFromSignalId(signalId) != null) {
+            if (getPCFromSignalId(signalId) != null) {
                 Log.v(TAG, "A known peer sent an offer. Ignoring.");
                 return ;
             }
-            //VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, false, payload); // TODO: Do not pass JSON to the VPC. It only needs to sdp.
+            //VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, false, payload); // TODO: Do not pass JSON to the PC. It only needs to sdp.
             WebRtcPeerConnection pc = factory.Create(this, context, url, peerId, sessionId, signalId, otherPeerId, otherSessionId, false, payload);
 
             peersMap.put(signalId, new WeakReference<>(pc));
@@ -326,12 +326,12 @@ public class SignalingServerConnection implements MyWebSocketListener {
                 Log.v(TAG, "Got unrelated handshake encouragement.");
                 return ;
             }
-            if (getVPCFromSignalId(signalId) != null) {
+            if (getPCFromSignalId(signalId) != null) {
                 Log.v(TAG, "A known peer sent an offer. Ignoring.");
                 return ;
             }
             WebRtcPeerConnection pc = factory.Create(this, context, url, peerId, sessionId, signalId, otherPeerId, otherSessionId, true, res);
-            //VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, true, res); // TODO: Do not pass JSON to the VPC. It only needs to sdp.
+            //VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, true, res); // TODO: Do not pass JSON to the PC. It only needs to sdp.
             peersMap.put(signalId, new WeakReference<>(pc));
             //iface.onIncomingOffer(otherPeerId);
         } catch (JSONException e) {

@@ -39,7 +39,6 @@ public class WebRtcPeerConnection implements  PeerConnection.Observer, SdpObserv
     Context context;
     DataChannel dChannel;
     SignalingServerConnection ssc;
-    boolean receivedAnswer;
 
     public WebRtcPeerConnection(SignalingServerConnection _ssc, Context _context, String _url, String _ourPeerId, int _ourSessionId, String _signalId, String _otherPeerId, int _otherSessionId, boolean _creatingOffer, JSONObject offerPayload) {
         ssc = _ssc;
@@ -93,7 +92,6 @@ public class WebRtcPeerConnection implements  PeerConnection.Observer, SdpObserv
             return ;
         }
         Log.v(TAG, "Setting remote description");
-        receivedAnswer = true;
         peerConnection.setRemoteDescription(this, remoteDesc);
     }
 

@@ -8,20 +8,21 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import org.webrtc.DataChannel;
+
 import java.nio.ByteBuffer;
 import java.util.Calendar;
-import java.util.Date;
 
-public class BenchReceiverActivity extends AppCompatActivity implements VideoPeerConnection.VideoPeerConnectionListener, View.OnClickListener, SignalingServerConnection.SignalingListener{
+public class BenchReceiverActivity extends AppCompatActivity implements View.OnClickListener, SignalingServerConnection.SignalingListener, BinaryWebRtcPeerConnection.BinaryWebRtcListenerInterface {
 
     final String TAG = BenchReceiverActivity.class.getName();
 
     final long MinDisplayUpdateInterval = 250;
-    final int BenchDataSize = 10*1024*1024; // 10mb
+    public static final int BenchDataSize = 10*1024*1024; // 10mb
 
     SignalingServerConnection ssc;
-    VideoPeerConnectionFactory vpcFactory;
-    VideoPeerConnection vpc;
+    BinaryWebRtcPeerConnectionFactory pcFactory;
+    BinaryWebRtcPeerConnection pc;
     EditText editText;
     TextView logView;
     Button goButton;
@@ -38,8 +39,8 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
         goButton = findViewById(R.id.goButton);
         goButton.setOnClickListener(this);
         goButton.setEnabled(false);
-        vpcFactory = new VideoPeerConnectionFactory(this);
-        ssc = new SignalingServerConnection(MainActivity.context, vpcFactory, this, "http://www.hivecdn.com/benchmark/video2.mp4");
+        pcFactory = new BinaryWebRtcPeerConnectionFactory(this);
+        ssc = new SignalingServerConnection(MainActivity.context, pcFactory, this, "http://www.hivecdn.com/benchmark/video2.mp4");
         //vpc = new VideoPeerConnection(MainActivity.context, "http://www.hivecdn.com/benchmark/video2.mp4", this);
     }
 
@@ -49,13 +50,13 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
     }
 
     @Override
-    public void onNewPeer(WebRtcPeerConnection _vpc) {
-        if (vpc != null) { // Hope that the first peer we connect to will be a sender. TODO: Fix this.
-            _vpc.close(); // TODO: Instead of closing connections after establishing them, we should reject before handshake starts.
+    public void onNewPeer(WebRtcPeerConnection _pc) {
+        if (pc != null) { // Hope that the first peer we connect to will be a sender. TODO: Fix this.
+            _pc.close(); // TODO: Instead of closing connections after establishing them, we should reject before handshake starts.
             return ;
         }
-        vpc = (VideoPeerConnection) _vpc;
-        Log.v(TAG, "Connected to peer id: " + vpc.otherPeerId);
+        pc = (BinaryWebRtcPeerConnection) _pc;
+        Log.v(TAG, "Connected to peer id: " + pc.otherPeerId);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -66,30 +67,16 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
     }
 
     @Override
-    public void onPeerDisconnected(WebRtcPeerConnection _vpc) {
-        if (vpc == _vpc)
-            vpc = null;
+    public void onPeerDisconnected(WebRtcPeerConnection _pc) {
+        if (pc == _pc)
+            pc = null;
     }
 
-    @Override
-    public void onRequest(VideoPeerConnection _vpc, int start, int len) {
-        ; // Do nothing. We're the sender.
-    }
-
-    @Override
-    public void onResponse(VideoPeerConnection _vpc, ByteBuffer buf, int start, int len) {
-        if (vpc != _vpc)
-            return ;
-        Log.v(TAG, "Received range [" + start + ", " + (start+len) + ")");
-        for (int i=start, j=0; i<len; i++, j++) {
-            if (buf.get(j) != (byte)i)
-            {
-                Log.v(TAG, "Corrupt payload detected at byte " + i);
-                vpc.close();
-            }
-        }
+    public void onMessage(WebRtcPeerConnection _pc, DataChannel.Buffer buffer) {
+        if (pc != pc)
+            return;
         long curTime = Calendar.getInstance().getTimeInMillis();
-        numBytesLeft -= len;
+        numBytesLeft -= buffer.data.remaining();
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -115,21 +102,10 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
         editText.setText(String.valueOf(numBytesLeft));
         startTime = Calendar.getInstance().getTimeInMillis();
         lastDisplayUpdateTime = startTime;
-        vpc.requestRange(0, numBytesLeft);
+        pc.sendMessage(new DataChannel.Buffer(ByteBuffer.allocate(1), true));
     }
 
     @Override
     public void onClick(View v) {
-        /*if (v == goButton) {
-            numBytesLeft = Integer.valueOf(editText.getText().toString());
-            if (numBytesLeft > 0) {
-                goButton.setEnabled(false);
-                editText.setEnabled(false);
-                startTime = Calendar.getInstance().getTimeInMillis();
-                lastDisplayUpdateTime = startTime;
-                vpc.requestRange(0, numBytesLeft);
-                Log.v(TAG, "Benchmark started");
-            }
-        }*/
     }
 }
