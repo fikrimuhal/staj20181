@@ -2,6 +2,7 @@ package com.hivecdn.androidp2p;
 
 import android.content.res.AssetManager;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -20,7 +21,7 @@ import scala.NotImplementedError;
 
 import static com.google.android.exoplayer2.C.LENGTH_UNSET;
 
-public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterface, SignalingServerConnection.SignalingListener {
+public class P2PDataSource implements DataSource, VideoPeerConnection.VideoPeerConnectionListener, SignalingServerConnection.SignalingListener {
 
     private final String TAG = P2PDataSource.class.getName();
 
@@ -43,6 +44,7 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
 
     DataSpec dataSpec;
     VideoPeerConnection vpc;
+    VideoPeerConnectionFactory vpcFactory;
     SignalingServerConnection ssc;
     int pos = 0;
     TreeSet<Triad> triads;
@@ -50,6 +52,7 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
     P2PDataSource() {
         Log.v(TAG, "New P2PDataSource");
         triads = new TreeSet<Triad>();
+        vpcFactory = new VideoPeerConnectionFactory(this);
     }
 
     @Override
@@ -58,18 +61,18 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
     }
 
     @Override
-    public void onNewPeer(VideoPeerConnection _vpc) {
+    public void onNewPeer(WebRtcPeerConnection _vpc) {
         if (vpc != null) { // Hope that the first peer we connect to will be a sender. TODO: Fix this.
             _vpc.close();
             return ;
         }
-        vpc = _vpc;
+        vpc = (VideoPeerConnection) _vpc;
         Log.v(TAG, "Requesting range [" + dataSpec.position + "," + (dataSpec.position+dataSpec.length) + ")");
         vpc.requestRange((int)dataSpec.position, (int)dataSpec.length);
     }
 
     @Override
-    public void onPeerDisconnected(VideoPeerConnection _vpc) {
+    public void onPeerDisconnected(WebRtcPeerConnection _vpc) {
         if (vpc == _vpc)
             vpc = null;
     }
@@ -105,7 +108,7 @@ public class P2PDataSource implements DataSource, VideoPeerConnection.MyInterfac
             triads.clear();
         }
         if (ssc == null)
-            ssc = new SignalingServerConnection(MainActivity.context, this, this, dataSpec.uri.toString());
+            ssc = new SignalingServerConnection(MainActivity.context, vpcFactory, this, dataSpec.uri.toString());
         else if (vpc != null) {
             Log.v(TAG, "Requesting range [" + dataSpec.position + "," + (dataSpec.position+dataSpec.length) + ")");
             vpc.requestRange((int)dataSpec.position, (int)dataSpec.length);

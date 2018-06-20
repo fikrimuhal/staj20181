@@ -8,11 +8,12 @@ import java.nio.ByteBuffer;
 
 import static java.lang.Math.min;
 
-public class BenchSenderActivity extends AppCompatActivity implements VideoPeerConnection.MyInterface, SignalingServerConnection.SignalingListener{
+public class BenchSenderActivity extends AppCompatActivity implements VideoPeerConnection.VideoPeerConnectionListener, SignalingServerConnection.SignalingListener{
 
     final String TAG = BenchSenderActivity.class.getName();
 
     SignalingServerConnection ssc;
+    VideoPeerConnectionFactory vpcFactory;
 
     @Override
     public void onIdReceived(String ourPeerId, int ourSessionId) {
@@ -20,12 +21,12 @@ public class BenchSenderActivity extends AppCompatActivity implements VideoPeerC
     }
 
     @Override
-    public void onNewPeer(VideoPeerConnection _vpc) {
+    public void onNewPeer(WebRtcPeerConnection _vpc) {
         // We don't do anything at this point. The sender waits for the receiver to receive a range.
     }
 
     @Override
-    public void onPeerDisconnected(VideoPeerConnection _vpc) {
+    public void onPeerDisconnected(WebRtcPeerConnection _vpc) {
     }
 
     @Override
@@ -50,7 +51,8 @@ public class BenchSenderActivity extends AppCompatActivity implements VideoPeerC
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bench_sender);
-        ssc = new SignalingServerConnection(MainActivity.context, this, this, "http://www.hivecdn.com/benchmark/video2.mp4");
+        vpcFactory = new VideoPeerConnectionFactory(this);
+        ssc = new SignalingServerConnection(MainActivity.context, vpcFactory, this, "http://www.hivecdn.com/benchmark/video2.mp4");
         //vpc = new VideoPeerConnection(MainActivity.context, "http://www.hivecdn.com/benchmark/video2.mp4", this);
     }
 }

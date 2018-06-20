@@ -16,13 +16,14 @@ import java.util.Map;
 import static java.lang.Math.min;
 import static java.lang.Thread.interrupted;
 
-public class SenderActivity extends AppCompatActivity implements VideoPeerConnection.MyInterface, SignalingServerConnection.SignalingListener {
+public class SenderActivity extends AppCompatActivity implements VideoPeerConnection.VideoPeerConnectionListener, SignalingServerConnection.SignalingListener {
 
     final static String TAG = SenderActivity.class.getName();
 
     static public AssetManager mngr;
 
     SignalingServerConnection ssc;
+    VideoPeerConnectionFactory vpcFactory;
     Map<String, Thread> threads;
 
     @Override
@@ -31,12 +32,12 @@ public class SenderActivity extends AppCompatActivity implements VideoPeerConnec
     }
 
     @Override
-    public void onNewPeer(VideoPeerConnection vpc) {
+    public void onNewPeer(WebRtcPeerConnection vpc) {
         // We wait for the receiver to request ranges.
     }
 
     @Override
-    public void onPeerDisconnected(VideoPeerConnection vpc) {
+    public void onPeerDisconnected(WebRtcPeerConnection vpc) {
         threads.get(vpc.signalId).interrupt();
         threads.remove(vpc.signalId);
     }
@@ -92,7 +93,8 @@ public class SenderActivity extends AppCompatActivity implements VideoPeerConnec
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sender);
         threads = new HashMap<>();
-        ssc = new SignalingServerConnection(MainActivity.context, this, this, MainActivity.context.getString(R.string.content_url));
+        vpcFactory = new VideoPeerConnectionFactory(this);
+        ssc = new SignalingServerConnection(MainActivity.context, vpcFactory, this, MainActivity.context.getString(R.string.content_url));
         //vpc = new VideoPeerConnection(MainActivity.context, MainActivity.context.getString(R.string.content_url), this);
         mngr = getAssets();
     }

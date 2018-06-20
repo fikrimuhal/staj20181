@@ -33,12 +33,11 @@ public class SignalingServerConnection implements MyWebSocketListener {
     final String TAG = SignalingServerConnection.class.getName();
 
     public interface SignalingListener {
-        //void onVerbose(String msg);
         void onIdReceived(String ourPeerId, int ourSessionId);
         //void onConnectionEncouraged(String otherId);
         //void onIncomingOffer(String otherId);
-        void onNewPeer(VideoPeerConnection vpc);
-        void onPeerDisconnected(VideoPeerConnection vpc);
+        void onNewPeer(WebRtcPeerConnection pc);
+        void onPeerDisconnected(WebRtcPeerConnection pc);
     }
 
 
@@ -46,16 +45,18 @@ public class SignalingServerConnection implements MyWebSocketListener {
     WebSocket socket;
     MyWebSocketProxy proxy;
     OkHttpClient client;
-    VideoPeerConnection.MyInterface vpciface;
+    //VideoPeerConnection.MyInterface vpciface;
     String url;
     String peerId;
     int sessionId;
     SignalingListener sListener;
-    Map<String, WeakReference<VideoPeerConnection>> peersMap;
+    Map<String, WeakReference<WebRtcPeerConnection>> peersMap;
+    WebRtcPeerConnectionFactoryInterface factory;
 
-    SignalingServerConnection(Context _context, VideoPeerConnection.MyInterface _vpciface, SignalingListener _sListener, String _url) {
+    SignalingServerConnection(Context _context, WebRtcPeerConnectionFactoryInterface _factory, SignalingListener _sListener, String _url) {
         context = _context;
-        vpciface = _vpciface;
+        //vpciface = _vpciface;
+        factory = _factory;
         sListener = _sListener;
         url = _url;
         proxy = new MyWebSocketProxy(this);
@@ -290,9 +291,10 @@ public class SignalingServerConnection implements MyWebSocketListener {
                 Log.v(TAG, "A known peer sent an offer. Ignoring.");
                 return ;
             }
-            VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, false, payload); // TODO: Do not pass JSON to the VPC. It only needs to sdp.
+            //VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, false, payload); // TODO: Do not pass JSON to the VPC. It only needs to sdp.
+            WebRtcPeerConnection pc = factory.Create(this, context, url, peerId, sessionId, signalId, otherPeerId, otherSessionId, false, payload);
 
-            peersMap.put(signalId, new WeakReference<>(vpc));
+            peersMap.put(signalId, new WeakReference<>(pc));
             //iface.onIncomingOffer(otherPeerId);
         }
         catch (JSONException e) {
@@ -328,8 +330,9 @@ public class SignalingServerConnection implements MyWebSocketListener {
                 Log.v(TAG, "A known peer sent an offer. Ignoring.");
                 return ;
             }
-            VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, true, res); // TODO: Do not pass JSON to the VPC. It only needs to sdp.
-            peersMap.put(signalId, new WeakReference<>(vpc));
+            WebRtcPeerConnection pc = factory.Create(this, context, url, peerId, sessionId, signalId, otherPeerId, otherSessionId, true, res);
+            //VideoPeerConnection vpc = new VideoPeerConnection(this, context, url, vpciface, peerId, sessionId, signalId, otherPeerId, otherSessionId, true, res); // TODO: Do not pass JSON to the VPC. It only needs to sdp.
+            peersMap.put(signalId, new WeakReference<>(pc));
             //iface.onIncomingOffer(otherPeerId);
         } catch (JSONException e) {
             Log.v(TAG, "JSONException");
@@ -363,21 +366,21 @@ public class SignalingServerConnection implements MyWebSocketListener {
             socket.close(1000, null);
     }
 
-    public void onGotSDP(VideoPeerConnection vpc, SessionDescription sdp) {
+    public void onGotSDP(WebRtcPeerConnection pc, SessionDescription sdp) {
         JSONObject message;
         try {
             JSONObject innerPayload = new JSONObject();
             innerPayload.put("remoteVersion", "2.2.7-SNAPSHOT");
             innerPayload.put("sdp", sdp.description);
-            if (vpc.creatingOffer)
+            if (pc.creatingOffer)
                 innerPayload.put("type", "offer");
             else
                 innerPayload.put("type", "answer");
-            innerPayload.put("signalId", vpc.signalId);
+            innerPayload.put("signalId", pc.signalId);
             JSONObject payload = new JSONObject();
-            payload.put("otherPeerId", vpc.otherPeerId);
-            payload.put("otherSessionId", vpc.otherSessionId);
-            if (vpc.creatingOffer)
+            payload.put("otherPeerId", pc.otherPeerId);
+            payload.put("otherSessionId", pc.otherSessionId);
+            if (pc.creatingOffer)
                 payload.put("type", "OFFER");
             else
                 payload.put("type", "ANSWER");
@@ -390,7 +393,7 @@ public class SignalingServerConnection implements MyWebSocketListener {
             Log.v(TAG, "Unexpected JSONException");
             return ;
         }
-        if (vpc.creatingOffer)
+        if (pc.creatingOffer)
             Log.v(TAG, "Sending offer.");
         else
             Log.v(TAG, "Sending answer.");
@@ -398,7 +401,7 @@ public class SignalingServerConnection implements MyWebSocketListener {
         socket.send(message.toString());
     }
 
-    public void onGotIceCandidate(VideoPeerConnection vpc, IceCandidate iceCandidate) {
+    public void onGotIceCandidate(WebRtcPeerConnection pc, IceCandidate iceCandidate) {
         JSONObject message;
         try {
             JSONObject innerPayload = new JSONObject();
@@ -406,10 +409,10 @@ public class SignalingServerConnection implements MyWebSocketListener {
             innerPayload.put("sdpMLineIndex", iceCandidate.sdpMLineIndex);
             innerPayload.put("sdpMid", iceCandidate.sdpMid);
             innerPayload.put("candidate", iceCandidate.sdp);
-            innerPayload.put("signalId", vpc.signalId);
+            innerPayload.put("signalId", pc.signalId);
             JSONObject payload = new JSONObject();
-            payload.put("otherPeerId", vpc.otherPeerId);
-            payload.put("otherSessionId", vpc.otherSessionId);
+            payload.put("otherPeerId", pc.otherPeerId);
+            payload.put("otherSessionId", pc.otherSessionId);
             payload.put("type", "CANDIDATE");
             payload.put("payload", innerPayload);
             message = new JSONObject();
@@ -425,12 +428,12 @@ public class SignalingServerConnection implements MyWebSocketListener {
         socket.send(message.toString());
     }
 
-    void onPeerConnected(VideoPeerConnection vpc) {
-        sListener.onNewPeer(vpc);
+    void onPeerConnected(WebRtcPeerConnection pc) {
+        sListener.onNewPeer(pc);
     }
 
-    void onPeerDisconnected(VideoPeerConnection vpc) {
-        peersMap.remove(vpc.signalId);
-        sListener.onPeerDisconnected(vpc);
+    void onPeerDisconnected(WebRtcPeerConnection pc) {
+        peersMap.remove(pc.signalId);
+        sListener.onPeerDisconnected(pc);
     }
 }

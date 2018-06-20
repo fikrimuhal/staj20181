@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.Date;
 
-public class BenchReceiverActivity extends AppCompatActivity implements VideoPeerConnection.MyInterface, View.OnClickListener, SignalingServerConnection.SignalingListener{
+public class BenchReceiverActivity extends AppCompatActivity implements VideoPeerConnection.VideoPeerConnectionListener, View.OnClickListener, SignalingServerConnection.SignalingListener{
 
     final String TAG = BenchReceiverActivity.class.getName();
 
@@ -20,6 +20,7 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
     final int BenchDataSize = 10*1024*1024; // 10mb
 
     SignalingServerConnection ssc;
+    VideoPeerConnectionFactory vpcFactory;
     VideoPeerConnection vpc;
     EditText editText;
     TextView logView;
@@ -37,7 +38,8 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
         goButton = findViewById(R.id.goButton);
         goButton.setOnClickListener(this);
         goButton.setEnabled(false);
-        ssc = new SignalingServerConnection(MainActivity.context, this, this, "http://www.hivecdn.com/benchmark/video2.mp4");
+        vpcFactory = new VideoPeerConnectionFactory(this);
+        ssc = new SignalingServerConnection(MainActivity.context, vpcFactory, this, "http://www.hivecdn.com/benchmark/video2.mp4");
         //vpc = new VideoPeerConnection(MainActivity.context, "http://www.hivecdn.com/benchmark/video2.mp4", this);
     }
 
@@ -47,12 +49,12 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
     }
 
     @Override
-    public void onNewPeer(VideoPeerConnection _vpc) {
+    public void onNewPeer(WebRtcPeerConnection _vpc) {
         if (vpc != null) { // Hope that the first peer we connect to will be a sender. TODO: Fix this.
             _vpc.close(); // TODO: Instead of closing connections after establishing them, we should reject before handshake starts.
             return ;
         }
-        vpc = _vpc;
+        vpc = (VideoPeerConnection) _vpc;
         Log.v(TAG, "Connected to peer id: " + vpc.otherPeerId);
         runOnUiThread(new Runnable() {
             @Override
@@ -64,7 +66,7 @@ public class BenchReceiverActivity extends AppCompatActivity implements VideoPee
     }
 
     @Override
-    public void onPeerDisconnected(VideoPeerConnection _vpc) {
+    public void onPeerDisconnected(WebRtcPeerConnection _vpc) {
         if (vpc == _vpc)
             vpc = null;
     }
