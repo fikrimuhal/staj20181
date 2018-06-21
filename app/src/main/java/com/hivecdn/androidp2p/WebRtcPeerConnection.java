@@ -195,17 +195,15 @@ public class WebRtcPeerConnection implements  PeerConnection.Observer, SdpObserv
 
     @Override
     public void onIceCandidatesRemoved(IceCandidate[] ıceCandidates) {
-        Log.v(TAG, "onIceCandidateRemoved");
     }
 
     @Override
     public void onAddStream(MediaStream mediaStream) {
-        Log.v(TAG, "onAddStream");
     }
 
     @Override
     public void onRemoveStream(MediaStream mediaStream) {
-        Log.v(TAG, "onRemoveStream");
+
     }
 
     @Override
@@ -222,7 +220,6 @@ public class WebRtcPeerConnection implements  PeerConnection.Observer, SdpObserv
 
     @Override
     public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
-        Log.v(TAG, "onAddTrack");
     }
 
     @Override
