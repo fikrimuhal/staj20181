@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+/**
  * Created by karta on 5/31/2018.
  */
 
@@ -165,11 +166,9 @@ public class WebRtcPeerConnection implements  PeerConnection.Observer, SdpObserv
     @Override
     public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
         Log.v(TAG, "onIceConnectionChange: " + iceConnectionState.name());
-        if (iceConnectionState == PeerConnection.IceConnectionState.CONNECTED) {
-            //ssc.onPeerConnected(this); // We need to wait for the data channel.
-        }
-        else if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
-            Log.v(TAG, "Disconnected");
+        // We check for connection in onStateChange (for the data channel)
+        if (iceConnectionState == PeerConnection.IceConnectionState.DISCONNECTED) {
+            ssc.onPeerDisconnected(this);
             otherPeerId = null;
             signalId = null;
             peerConnection = null;
@@ -236,8 +235,7 @@ public class WebRtcPeerConnection implements  PeerConnection.Observer, SdpObserv
         Log.v(TAG, "onStateChange: " + dChannel.state().name());
         if (dChannel.state() == DataChannel.State.OPEN)
             ssc.onPeerConnected(this);
-        else if (dChannel.state() == DataChannel.State.CLOSED)
-            ssc.onPeerDisconnected(this);
+        // We check for disconnection in onIceStateChange
     }
 
     @Override

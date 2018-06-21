@@ -1,6 +1,7 @@
 package com.hivecdn.androidp2p;
 
 import android.content.Context;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -31,6 +32,7 @@ import okio.ByteString;
 public class SignalingServerConnection implements MyWebSocketListener {
 
     final String TAG = SignalingServerConnection.class.getName();
+    final long ConnectionFailureReconnectTimeout = 15000;
 
     public interface SignalingListener {
         void onIdReceived(String ourPeerId, int ourSessionId);
@@ -64,11 +66,18 @@ public class SignalingServerConnection implements MyWebSocketListener {
                 .readTimeout(0,  TimeUnit.MILLISECONDS)
                 .build();
         peersMap = new HashMap<>();
+        reconnect();
+    }
+
+    void reconnect() {
+        if (socket != null) {
+            socket.close(1000, null);
+            socket = null;
+        }
         getWebsocketAddress();
     }
 
-    void getWebsocketAddress()
-    {
+    void getWebsocketAddress() {
         Log.v(TAG, "Getting websocket addresss");
         Request request = new Request.Builder()
                 .url("https://static.hivecdn.com/host")
@@ -78,6 +87,7 @@ public class SignalingServerConnection implements MyWebSocketListener {
             public void onFailure(Call call, IOException e) {
                 Log.v(TAG, "Failed to get websocket address.");
                 e.printStackTrace();
+                setReconnectTimeout();
             }
 
             @Override
@@ -132,10 +142,24 @@ public class SignalingServerConnection implements MyWebSocketListener {
         },5000,15000);
     }
 
+    void setReconnectTimeout() {
+        Log.e(TAG, "Trying to reconnect to the signaling server in " + ConnectionFailureReconnectTimeout + " ms.");
+        new android.os.Handler(Looper.getMainLooper()).postDelayed(
+                new Runnable() {
+                    public void run() {
+                        reconnect();
+                    }
+                },
+                ConnectionFailureReconnectTimeout);
+    }
+
     void sendAuth() {
         final String encodedUrl = URLEncoder.encode(url);
         Log.v(TAG, "Sending authentication etc.");
-        socket.send("{\"payload\":{\"siteId\":\"hivecdn-0000-0000-0000\",\"deviceType\":\"androidApp\",\"caps\":{\"webRTCSupport\":true,\"wsSupport\":true}},\"command\":\"bogazici.Authentication\"}");
+        if (peerId == null)
+            socket.send("{\"payload\":{\"siteId\":\"hivecdn-0000-0000-0000\",\"deviceType\":\"androidApp\",\"caps\":{\"webRTCSupport\":true,\"wsSupport\":true}},\"command\":\"bogazici.Authentication\"}");
+        else
+            socket.send("{\"payload\":{\"peerId\":\""+peerId+"\",\"siteId\":\"hivecdn-0000-0000-0000\",\"deviceType\":\"androidApp\",\"caps\":{\"webRTCSupport\":true,\"wsSupport\":true}},\"command\":\"bogazici.Authentication\"}");
         JSONObject msg = new JSONObject();
         JSONObject payload = new JSONObject();
         try {
@@ -357,8 +381,9 @@ public class SignalingServerConnection implements MyWebSocketListener {
 
     @Override
     public void onFailure(WebSocket webSocket, Throwable t, @Nullable Response response) {
-        Log.v(TAG, "Error");
+        Log.e(TAG, "Websocket error");
         t.printStackTrace();
+        setReconnectTimeout();
     }
 
     public void close() {

@@ -51,12 +51,13 @@ public class BenchReceiverActivity extends AppCompatActivity implements View.OnC
 
     @Override
     public void onNewPeer(WebRtcPeerConnection _pc) {
+        Log.v(TAG, "Connected to peer id: " + _pc.otherPeerId);
         if (pc != null) { // Hope that the first peer we connect to will be a sender. TODO: Fix this.
             _pc.close(); // TODO: Instead of closing connections after establishing them, we should reject before handshake starts.
+            Log.v(TAG, "We're already connected to another peer. Ignoring.");
             return ;
         }
         pc = (BinaryWebRtcPeerConnection) _pc;
-        Log.v(TAG, "Connected to peer id: " + pc.otherPeerId);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -68,8 +69,11 @@ public class BenchReceiverActivity extends AppCompatActivity implements View.OnC
 
     @Override
     public void onPeerDisconnected(WebRtcPeerConnection _pc) {
-        if (pc == _pc)
+        Log.v(TAG, "onPeerDisconnected");
+        if (pc == _pc) {
+            Log.v(TAG, "This was the peer we're benchmarking with. Setting pc=null.");
             pc = null;
+        }
     }
 
     public void onMessage(WebRtcPeerConnection _pc, DataChannel.Buffer buffer) {
